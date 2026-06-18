@@ -98,6 +98,7 @@ jobs:
         with: { targets: "aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android" }
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
+      - uses: gradle/actions/setup-gradle@v4
       - run: cargo install cargo-ndk
       - run: |
           cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 \
@@ -105,7 +106,7 @@ jobs:
           cargo run -p meco-uniffi --bin uniffi-bindgen -- generate \
             --library target/aarch64-linux-android/release/libmeco_uniffi.so \
             --language kotlin --out-dir bindings/android/src/main/kotlin
-          cd bindings/android && ./gradlew assembleRelease
+          cd bindings/android && gradle assembleRelease
       - uses: actions/upload-artifact@v4
         with: { name: meco-android-aar, path: bindings/android/build/outputs/aar/*.aar }
 
