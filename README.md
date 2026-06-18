@@ -32,7 +32,9 @@ Conversions route through the Zvvnmod hub. (`Oyun` / `Utn57` are recognized but 
 | iOS | SwiftPM / `pod 'Meco'` | `try translate(from: "z52", to: "menk_shape", input: s)` |
 | Android | `implementation("com.zvvnmod:meco-android:…")` | `translate("z52", "menk_shape", s)` |
 
-Full install + publish steps: **[DISTRIBUTION.md](DISTRIBUTION.md)**.
+**[USAGE.md](USAGE.md)** — download the prebuilt artifacts from [Releases](../../releases) and use
+them on each platform (C / Go / Python / Dart / Java / Android / Swift / ObjC / Web / PHP), no
+package-manager account needed. **[DISTRIBUTION.md](DISTRIBUTION.md)** — optional registry publishing.
 
 ## Build & verify
 

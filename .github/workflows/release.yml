@@ -1,40 +1,49 @@
-# Release pipeline: on a version tag, build every platform artifact from the one Rust core and
-# attach/publish them. Assumes meco-rust is its own repository (root = this directory).
+# Release pipeline (download model): on a version tag, build every platform artifact from the one
+# Rust core and attach them to a GitHub Release for download. No registry publishing — no accounts
+# or secrets needed (only the auto-provided GITHUB_TOKEN to create the Release).
 #
-# Secrets to configure: NPM_TOKEN (wasm), plus registry creds for CocoaPods/Maven if used.
+# Assumes meco-rust is its own repository (root = this directory).
 name: release
 
 on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: write # create the Release + upload assets
+
 jobs:
-  # Native libmeco (C ABI) for every server/desktop target — consumed by the PHP package + cgo/JNI.
-  native-libs:
+  # C ABI: static (.a/.lib) + dynamic (.so/.dylib/.dll) + meco.h, per platform — for C / Go-cgo /
+  # Python / Dart / Java / any language that loads a C library.
+  c-libs:
     strategy:
       matrix:
         include:
-          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,  dir: linux-x86_64,   ext: so }
-          - { os: ubuntu-latest,  target: aarch64-unknown-linux-gnu, dir: linux-aarch64,  ext: so,  cross: true }
-          - { os: macos-latest,   target: aarch64-apple-darwin,      dir: darwin-aarch64, ext: dylib }
-          - { os: macos-latest,   target: x86_64-apple-darwin,       dir: darwin-x86_64,  ext: dylib }
-          - { os: windows-latest, target: x86_64-pc-windows-msvc,    dir: windows-x86_64, ext: dll }
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,  name: linux-x86_64 }
+          - { os: ubuntu-latest,  target: aarch64-unknown-linux-gnu, name: linux-aarch64, cross: true }
+          - { os: macos-latest,   target: aarch64-apple-darwin,      name: macos-arm64 }
+          - { os: macos-latest,   target: x86_64-apple-darwin,       name: macos-x86_64 }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc,    name: windows-x86_64 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with: { targets: "${{ matrix.target }}" }
       - if: ${{ matrix.cross }}
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
-      - if: ${{ matrix.cross }}
-        run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+        run: |
+          sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
       - run: cargo build -p meco-cabi --release --target ${{ matrix.target }}
+      - name: stage
+        shell: bash
+        run: |
+          d=meco-c-${{ matrix.name }}; mkdir -p "$d"
+          cp crates/meco-cabi/meco.h "$d"/
+          cp target/${{ matrix.target }}/release/*meco.* "$d"/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
-        with:
-          name: libmeco-${{ matrix.dir }}
-          path: target/${{ matrix.target }}/release/*meco.${{ matrix.ext }}
+        with: { name: meco-c-${{ matrix.name }}, path: meco-c-${{ matrix.name }} }
 
-  # WebAssembly npm package.
+  # WebAssembly npm package as a downloadable tarball (`npm install ./meco-wasm-*.tgz`).
   wasm:
     runs-on: ubuntu-latest
     steps:
@@ -43,37 +52,45 @@ jobs:
         with: { targets: "wasm32-unknown-unknown" }
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: wasm-pack build crates/meco-wasm --target web --out-name meco
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, registry-url: "https://registry.npmjs.org" }
-      - run: cd crates/meco-wasm/pkg && npm publish --access public
-        env: { NODE_AUTH_TOKEN: "${{ secrets.NPM_TOKEN }}" }
+      - run: cd crates/meco-wasm/pkg && npm pack && mv *.tgz "$GITHUB_WORKSPACE/"
+      - uses: actions/upload-artifact@v4
+        with: { name: meco-wasm-npm, path: "*.tgz" }
 
-  # iOS/macOS XCFramework (UniFFI Swift).
-  apple-xcframework:
+  # Apple xcframeworks: Swift (UniFFI) for Swift apps, and the C ABI for Objective-C / C.
+  apple:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with: { targets: "aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios" }
-      - run: |
+        with: { targets: "aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios,aarch64-apple-darwin" }
+      - name: Swift xcframework (UniFFI)
+        run: |
           cargo build -p meco-uniffi --release --target aarch64-apple-ios
           cargo build -p meco-uniffi --release --target aarch64-apple-ios-sim
           cargo run -p meco-uniffi --bin uniffi-bindgen -- generate \
-            --library target/aarch64-apple-ios/release/libmeco_uniffi.dylib \
-            --language swift --out-dir bindings/swift/gen
-          # headers/modulemap -> a headers dir; create the xcframework from the per-platform static libs
-          mkdir -p hdr && cp bindings/swift/gen/*.h bindings/swift/gen/*.modulemap hdr/
+            --library target/aarch64-apple-ios/release/libmeco_uniffi.dylib --language swift --out-dir sw
+          mkdir -p hdr && cp sw/*.h sw/*.modulemap hdr/
           xcodebuild -create-xcframework \
             -library target/aarch64-apple-ios/release/libmeco_uniffi.a -headers hdr \
             -library target/aarch64-apple-ios-sim/release/libmeco_uniffi.a -headers hdr \
-            -output MecoFFI.xcframework
-          cp bindings/swift/gen/meco_uniffi.swift bindings/swift/Sources/Meco/
-          zip -r Meco.xcframework.zip MecoFFI.xcframework bindings/swift/Sources bindings/swift/Package.swift
+            -output MecoSwift.xcframework
+          zip -r MecoSwift.xcframework.zip MecoSwift.xcframework sw/meco_uniffi.swift
+      - name: C ABI xcframework (ObjC / C)
+        run: |
+          cargo build -p meco-cabi --release --target aarch64-apple-ios
+          cargo build -p meco-cabi --release --target aarch64-apple-ios-sim
+          mkdir -p ch && cp crates/meco-cabi/meco.h ch/
+          printf 'module Meco { header "meco.h"\n export * }\n' > ch/module.modulemap
+          xcodebuild -create-xcframework \
+            -library target/aarch64-apple-ios/release/libmeco.a -headers ch \
+            -library target/aarch64-apple-ios-sim/release/libmeco.a -headers ch \
+            -output MecoC.xcframework
+          zip -r MecoC.xcframework.zip MecoC.xcframework
       - uses: actions/upload-artifact@v4
-        with: { name: Meco-xcframework, path: Meco.xcframework.zip }
+        with: { name: meco-apple, path: "*.xcframework.zip" }
 
-  # Android AAR (UniFFI Kotlin + cargo-ndk .so).
-  android-aar:
+  # Android AAR (UniFFI Kotlin + cargo-ndk .so for all ABIs).
+  android:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,22 +109,23 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: meco-android-aar, path: bindings/android/build/outputs/aar/*.aar }
 
-  # Bundle the native libs into the PHP package layout + cut the GitHub Release.
+  # Gather everything and cut a downloadable GitHub Release.
   release:
-    needs: [native-libs, apple-xcframework, android-aar]
+    needs: [c-libs, wasm, apple, android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with: { path: artifacts }
-      - run: |
-          mkdir -p php-prebuilt
-          for d in artifacts/libmeco-*; do
-            name="${d#artifacts/libmeco-}"
-            mkdir -p "php-prebuilt/$name" && cp "$d"/*meco.* "php-prebuilt/$name/"
-          done
-          # attach native libs, the xcframework zip, and the prebuilt bundle to the release
+      - name: zip per-platform C libs
+        run: |
+          cd artifacts
+          for d in meco-c-*; do zip -r "../$d.zip" "$d"; done
+          cd ..
       - uses: softprops/action-gh-release@v2
         with:
+          generate_release_notes: true
           files: |
-            artifacts/**/*
-            php-prebuilt/**/*
+            meco-c-*.zip
+            artifacts/meco-wasm-npm/*.tgz
+            artifacts/meco-apple/*.zip
+            artifacts/meco-android-aar/*.aar
