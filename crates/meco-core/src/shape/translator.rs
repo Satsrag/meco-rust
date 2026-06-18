@@ -48,7 +48,18 @@ impl ShapeTranslator {
                 fragment.pop()?;
                 fragment.set_tail(self.rule.get_char_type(c));
                 if fragment.is_blank() {
-                    return Err(MecoError::NotFoundInMapper(c.to_string()));
+                    // Passthrough (decision #3): `c` is in this encoding's range but unmappable even
+                    // alone — emit it verbatim instead of erroring. Flush the pending word first so
+                    // output stays in order.
+                    if word.is_not_blank() {
+                        self.translate_word(&mut builder, &word)?;
+                        word = ShapeWord::new();
+                    }
+                    builder.push(c);
+                    fragment = ShapeWordFragment::new();
+                    fragment.set_head(Some(CharType::Other));
+                    i += 1;
+                    continue;
                 }
                 word.add(fragment);
                 fragment = ShapeWordFragment::new();

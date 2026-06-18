@@ -59,3 +59,33 @@ fn translate_never_panics_on_random_input() {
     }
     eprintln!("fuzz: {calls} translate() calls, no panic");
 }
+
+/// Passthrough policy (decision #3): no single in-range code point should ever produce a content
+/// error — it either maps or is emitted verbatim. Sweeps each encoding's code range.
+#[test]
+fn in_range_chars_never_content_error() {
+    let sweeps: &[(CodeType, CodeType, u32, u32)] = &[
+        (CodeType::Z52, CodeType::Zvvnmod, 0x1840, 0x18B0),
+        (CodeType::MenkShape, CodeType::Zvvnmod, 0xE230, 0xE360),
+        (CodeType::Delehi, CodeType::Zvvnmod, 0x1820, 0x1843),
+        (CodeType::MenkLetter, CodeType::Zvvnmod, 0x1820, 0x1843),
+        (CodeType::Zvvnmod, CodeType::Z52, 0xE000, 0xE150),
+        (CodeType::Zvvnmod, CodeType::MenkShape, 0xE000, 0xE150),
+        (CodeType::Zvvnmod, CodeType::Delehi, 0xE000, 0xE150),
+        (CodeType::Zvvnmod, CodeType::MenkLetter, 0xE000, 0xE150),
+    ];
+    let mut passthrough = 0u64;
+    for &(from, to, lo, hi) in sweeps {
+        for cp in lo..=hi {
+            if let Some(c) = char::from_u32(cp) {
+                let s = c.to_string();
+                let out = translate(from, to, &s)
+                    .unwrap_or_else(|e| panic!("{from:?}->{to:?} U+{cp:04X} content error: {e}"));
+                if out == s {
+                    passthrough += 1;
+                }
+            }
+        }
+    }
+    eprintln!("sweep: {passthrough} in-range chars passed through verbatim");
+}

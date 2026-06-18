@@ -54,7 +54,16 @@ impl LetterFromTranslator {
                 fragment.pop()?;
                 fragment.set_tail(Some(self.unicode_type(c)));
                 if fragment.is_blank() {
-                    return Err(MecoError::NotFoundInMapper(c.to_string()));
+                    // Passthrough (decision #3): in-range but unmappable -> emit verbatim.
+                    if word.is_not_blank() {
+                        self.translate_word(&mut builder, &mut word)?;
+                        word = LetterWord::new();
+                    }
+                    builder.push(c);
+                    fragment = LetterWordFragment::new();
+                    fragment.set_head(Some(CharType::Other));
+                    i += 1;
+                    continue;
                 }
                 word.add(fragment);
                 fragment = LetterWordFragment::new();
