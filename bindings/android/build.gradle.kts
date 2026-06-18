@@ -17,8 +17,17 @@ android {
     defaultConfig {
         minSdk = 21
     }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
     sourceSets["main"].kotlin.srcDir("src/main/kotlin")
     sourceSets["main"].jniLibs.srcDir("src/main/jniLibs")
+}
+
+// Align Java + Kotlin JVM targets (Gradle/Kotlin now error on a mismatch).
+kotlin {
+    jvmToolchain(17)
 }
 
 dependencies {
