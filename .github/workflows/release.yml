@@ -99,6 +99,8 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
+      - uses: nttld/setup-ndk@v1
+        with: { ndk-version: r26d, add-to-path: true }
       - run: cargo install cargo-ndk
       - run: |
           cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 \
@@ -113,6 +115,7 @@ jobs:
   # Gather everything and cut a downloadable GitHub Release.
   release:
     needs: [c-libs, wasm, apple, android]
+    if: always() # publish whatever built — a single failing platform shouldn't block the release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

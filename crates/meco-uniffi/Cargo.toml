@@ -7,7 +7,8 @@ description = "UniFFI binding for meco-core: idiomatic Swift (iOS) and Kotlin (A
 
 [lib]
 name = "meco_uniffi"
-crate-type = ["cdylib", "lib"]
+# staticlib (.a) is needed for the iOS XCFramework; cdylib for Android/desktop; lib for the bindgen bin.
+crate-type = ["staticlib", "cdylib", "lib"]
 
 # Self-contained bindings generator: `cargo run -p meco-uniffi --bin uniffi-bindgen -- ...`
 [[bin]]
