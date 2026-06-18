@@ -41,7 +41,7 @@ jobs:
           cp crates/meco-cabi/meco.h "$d"/
           cp target/${{ matrix.target }}/release/*meco.* "$d"/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
-        with: { name: meco-c-${{ matrix.name }}, path: meco-c-${{ matrix.name }} }
+        with: { name: "meco-c-${{ matrix.name }}", path: "meco-c-${{ matrix.name }}" }
 
   # WebAssembly npm package as a downloadable tarball (`npm install ./meco-wasm-*.tgz`).
   wasm:
