@@ -1,0 +1,13 @@
+[package]
+name = "meco-core"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Mongolian Encoding Converter — pure Rust core, ported from the Java meco library. Java is the authoritative behavior oracle; PHP is reference-only."
+
+[lib]
+name = "meco_core"
+
+[dependencies]
+# Intentionally dependency-free for now so the core builds fully offline.
+# thiserror may be adopted later once a network fetch is confirmed available.

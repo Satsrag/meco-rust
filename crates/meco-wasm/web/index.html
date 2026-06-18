@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meco · WASM 三栏转换 (Zvvnmod 枢纽)</title>
+<style>
+    /* per-encoding fonts (copied from meco static/fonts) */
+    @font-face { font-family:"delehi";      src:url("fonts/delehi.ttf")       format("truetype"); }
+    @font-face { font-family:"menk letter"; src:url("fonts/menk_letter.ttf")  format("truetype"); }
+    @font-face { font-family:"menk shape";  src:url("fonts/menk_shape.ttf")   format("truetype"); }
+    @font-face { font-family:"zvvn mod";    src:url("fonts/ZvvnMod.ttf")      format("truetype"); }
+    @font-face { font-family:"z52";         src:url("fonts/z52.otf")          format("opentype"); }
+    @font-face { font-family:"monaco";      src:url("fonts/monaco.ttf")       format("truetype"); }
+
+    :root { --bd:#dcd8cd; --mut:#8a8577; --acc:#2d7d6f; --hub:#b8860b; --bg:#faf9f6; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:#222; padding:16px 20px;
+           font-family:system-ui,-apple-system,"PingFang SC",sans-serif; }
+    h1 { font-size:17px; margin:0 0 4px; }
+    .sub { font-size:12px; color:var(--mut); margin-bottom:12px; }
+    #status { font-weight:700; }
+    .samples { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+    .samples button { font-size:12px; padding:3px 8px; border:1px solid var(--bd); border-radius:6px; background:#fff; cursor:pointer; }
+
+    .panes { display:flex; gap:14px; align-items:flex-start; }
+    .pane { flex:1 1 0; min-width:240px; }
+    .pane .cap { display:flex; justify-content:space-between; align-items:center; gap:8px;
+                 font-size:13px; color:var(--mut); margin-bottom:6px; }
+    .pane .cap select { font-size:13px; padding:4px 8px; border:1px solid var(--bd); border-radius:6px; background:#fff; }
+    .pane.hub .cap { color:var(--hub); font-weight:700; }
+    .mong { writing-mode:vertical-lr; text-orientation:sideways; height:300px; width:100%;
+            padding:12px; border:1px solid var(--bd); border-radius:9px; background:#fff;
+            font-size:30px; line-height:1.5; overflow:auto; white-space:pre-wrap; resize:vertical; }
+    .pane.hub .mong { border-color:var(--hub); background:#fffdf5; }
+    .arrow { align-self:center; color:var(--mut); font-size:22px; padding-top:120px; }
+    .hex { font-family:"monaco",ui-monospace,Menlo,monospace; font-size:11px; line-height:1.6;
+           color:#555; background:#f3f1ea; border:1px solid var(--bd); border-radius:8px;
+           padding:6px 8px; margin-top:6px; white-space:pre-wrap; word-break:break-all; min-height:26px; }
+    .tag { color:var(--acc); font-weight:700; }
+    .err { color:#c0392b; }
+</style>
+</head>
+<body>
+    <h1>meco · WASM 三栏转换</h1>
+    <div class="sub">中间是 <b>Zvvnmod</b> 中间码（枢纽），两边各选一种编码，输入任一框即时互转 ——
+        全部由 Rust 核心编译的 WebAssembly 在浏览器本地完成。 <span id="status">加载 WASM…</span></div>
+
+    <div class="samples">
+        <span>样例(标准 Unicode):</span>
+        <button data-s="&#x1830;&#x1820;&#x180d;&#x1822;&#x180d;&#x1822;&#x1828;">ᠰᠠᠶᠢᠨ sain</button>
+        <button data-s="&#x182a;&#x1820;&#x182d;&#x1830;&#x1822;">ᠪᠠᠭᠰᠢ bagsi</button>
+        <button data-s="&#x182c;&#x1822;&#x182d;&#x1822;&#x180d;&#x1822;&#x1828;">ᠬᠢᠭᠢᠶᠢᠨ</button>
+    </div>
+
+    <div class="panes">
+        <div class="pane" id="paneL">
+            <div class="cap"><select id="encL"></select><span class="hint">左 left</span></div>
+            <textarea class="mong" id="boxL" placeholder="选编码 / 由中间转入"></textarea>
+            <div class="hex" id="hexL"></div>
+        </div>
+        <div class="arrow">⇄</div>
+        <div class="pane hub" id="paneM">
+            <div class="cap"><span>zvvnmod · 中间码 hub</span></div>
+            <textarea class="mong" id="boxM" placeholder="Zvvnmod 中间码"></textarea>
+            <div class="hex" id="hexM"></div>
+        </div>
+        <div class="arrow">⇄</div>
+        <div class="pane" id="paneR">
+            <div class="cap"><select id="encR"></select><span class="hint">右 right</span></div>
+            <textarea class="mong" id="boxR" placeholder="选编码 / 由中间转入"></textarea>
+            <div class="hex" id="hexR"></div>
+        </div>
+    </div>
+
+<script type="module">
+import init, { translate, version } from "./pkg/meco_wasm.js";
+
+const SIDE_TYPES = ["z52", "menk_shape", "menk_letter", "delehi"]; // supported (oyun/utn57 deferred)
+const FONTS = {
+    zvvnmod:"'zvvn mod'", delehi:"'delehi'", menk_letter:"'menk letter'",
+    menk_shape:"'menk shape'", z52:"'z52'",
+};
+const FALLBACK = ",'zvvn mod',sans-serif";
+const SPECIAL = {0x0020:"SP",0x202f:"NNBSP",0x180e:"MVS",0x180b:"FVS1",0x180c:"FVS2",0x180d:"FVS3",0x180a:"NIRUGU"};
+const $ = id => document.getElementById(id);
+
+function hex(s){
+    if(!s) return "";
+    return Array.from(s).map(ch=>{
+        const cp = ch.codePointAt(0), n = SPECIAL[cp];
+        return `U+${cp.toString(16).toUpperCase().padStart(4,"0")}${n?` <span class="tag">${n}</span>`:""}`;
+    }).join("  ");
+}
+function fillSel(sel, def){ SIDE_TYPES.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;if(t===def)o.selected=true;sel.appendChild(o);}); }
+function encOf(which){ return which==="M" ? "zvvnmod" : (which==="L" ? $("encL").value : $("encR").value); }
+function applyFonts(){
+    $("boxL").style.fontFamily = FONTS[$("encL").value]+FALLBACK;
+    $("boxM").style.fontFamily = FONTS.zvvnmod+FALLBACK;
+    $("boxR").style.fontFamily = FONTS[$("encR").value]+FALLBACK;
+}
+function tr(from,to,s){ if(s==="") return ""; try{ return translate(from,to,s); }catch(e){ return null; } }
+
+// recompute from a source box ("L" | "M" | "R")
+function recompute(src){
+    const val = $("box"+src).value;
+    const srcEnc = encOf(src);
+    // to hub
+    let zv = src==="M" ? val : tr(srcEnc,"zvvnmod",val);
+    const setErr = (id)=>{ $(id).innerHTML = `<span class="err">转换错误 / unsupported</span>`; };
+    if(zv===null){ // source failed to decode
+        ["L","M","R"].filter(x=>x!==src).forEach(x=>{ $("box"+x).value=""; setErr("hex"+x); });
+        $("hex"+src).innerHTML = hex(val);
+        return;
+    }
+    if(src!=="M") $("boxM").value = zv;
+    for(const x of ["L","M","R"]){
+        if(x===src) continue;
+        if(x==="M"){ /* already set */ }
+        else {
+            const out = tr("zvvnmod", encOf(x), zv);
+            $("box"+x).value = out===null ? "" : out;
+        }
+    }
+    ["L","M","R"].forEach(x=>{ $("hex"+x).innerHTML = hex($("box"+x).value); });
+}
+
+function wire(){
+    fillSel($("encL"),"z52");
+    fillSel($("encR"),"menk_shape");
+    applyFonts();
+    const deb = src => { clearTimeout(window._t); window._t=setTimeout(()=>recompute(src),120); };
+    $("boxL").addEventListener("input",()=>deb("L"));
+    $("boxM").addEventListener("input",()=>deb("M"));
+    $("boxR").addEventListener("input",()=>deb("R"));
+    $("encL").onchange = ()=>{ applyFonts(); recompute("M"); };
+    $("encR").onchange = ()=>{ applyFonts(); recompute("M"); };
+    document.querySelectorAll(".samples button").forEach(b=>b.onclick=()=>{
+        // samples are standard Unicode (delehi); drive via the hub
+        const zv = tr("delehi","zvvnmod", b.getAttribute("data-s"));
+        $("boxM").value = zv===null ? "" : zv;
+        recompute("M");
+    });
+}
+
+init().then(()=>{
+    $("status").textContent = "WASM 就绪 ✓  core v"+version();
+    wire();
+}).catch(e=>{ $("status").innerHTML = `<span class="err">WASM 加载失败: ${e}</span>`; });
+</script>
+</body>
+</html>

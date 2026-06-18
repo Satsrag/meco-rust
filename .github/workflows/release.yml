@@ -1,0 +1,113 @@
+# Release pipeline: on a version tag, build every platform artifact from the one Rust core and
+# attach/publish them. Assumes meco-rust is its own repository (root = this directory).
+#
+# Secrets to configure: NPM_TOKEN (wasm), plus registry creds for CocoaPods/Maven if used.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  # Native libmeco (C ABI) for every server/desktop target — consumed by the PHP package + cgo/JNI.
+  native-libs:
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,  dir: linux-x86_64,   ext: so }
+          - { os: ubuntu-latest,  target: aarch64-unknown-linux-gnu, dir: linux-aarch64,  ext: so,  cross: true }
+          - { os: macos-latest,   target: aarch64-apple-darwin,      dir: darwin-aarch64, ext: dylib }
+          - { os: macos-latest,   target: x86_64-apple-darwin,       dir: darwin-x86_64,  ext: dylib }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc,    dir: windows-x86_64, ext: dll }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "${{ matrix.target }}" }
+      - if: ${{ matrix.cross }}
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - if: ${{ matrix.cross }}
+        run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+      - run: cargo build -p meco-cabi --release --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libmeco-${{ matrix.dir }}
+          path: target/${{ matrix.target }}/release/*meco.${{ matrix.ext }}
+
+  # WebAssembly npm package.
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "wasm32-unknown-unknown" }
+      - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - run: wasm-pack build crates/meco-wasm --target web --out-name meco
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, registry-url: "https://registry.npmjs.org" }
+      - run: cd crates/meco-wasm/pkg && npm publish --access public
+        env: { NODE_AUTH_TOKEN: "${{ secrets.NPM_TOKEN }}" }
+
+  # iOS/macOS XCFramework (UniFFI Swift).
+  apple-xcframework:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios" }
+      - run: |
+          cargo build -p meco-uniffi --release --target aarch64-apple-ios
+          cargo build -p meco-uniffi --release --target aarch64-apple-ios-sim
+          cargo run -p meco-uniffi --bin uniffi-bindgen -- generate \
+            --library target/aarch64-apple-ios/release/libmeco_uniffi.dylib \
+            --language swift --out-dir bindings/swift/gen
+          # headers/modulemap -> a headers dir; create the xcframework from the per-platform static libs
+          mkdir -p hdr && cp bindings/swift/gen/*.h bindings/swift/gen/*.modulemap hdr/
+          xcodebuild -create-xcframework \
+            -library target/aarch64-apple-ios/release/libmeco_uniffi.a -headers hdr \
+            -library target/aarch64-apple-ios-sim/release/libmeco_uniffi.a -headers hdr \
+            -output MecoFFI.xcframework
+          cp bindings/swift/gen/meco_uniffi.swift bindings/swift/Sources/Meco/
+          zip -r Meco.xcframework.zip MecoFFI.xcframework bindings/swift/Sources bindings/swift/Package.swift
+      - uses: actions/upload-artifact@v4
+        with: { name: Meco-xcframework, path: Meco.xcframework.zip }
+
+  # Android AAR (UniFFI Kotlin + cargo-ndk .so).
+  android-aar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android" }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - run: cargo install cargo-ndk
+      - run: |
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 \
+            -o bindings/android/src/main/jniLibs build -p meco-uniffi --release
+          cargo run -p meco-uniffi --bin uniffi-bindgen -- generate \
+            --library target/aarch64-linux-android/release/libmeco_uniffi.so \
+            --language kotlin --out-dir bindings/android/src/main/kotlin
+          cd bindings/android && ./gradlew assembleRelease
+      - uses: actions/upload-artifact@v4
+        with: { name: meco-android-aar, path: bindings/android/build/outputs/aar/*.aar }
+
+  # Bundle the native libs into the PHP package layout + cut the GitHub Release.
+  release:
+    needs: [native-libs, apple-xcframework, android-aar]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - run: |
+          mkdir -p php-prebuilt
+          for d in artifacts/libmeco-*; do
+            name="${d#artifacts/libmeco-}"
+            mkdir -p "php-prebuilt/$name" && cp "$d"/*meco.* "php-prebuilt/$name/"
+          done
+          # attach native libs, the xcframework zip, and the prebuilt bundle to the release
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*
+            php-prebuilt/**/*

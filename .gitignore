@@ -1,0 +1,15 @@
+/target
+/tools/*/out/
+/tools/oracle-java/deps-cp.txt
+# generated bindings + compiled smoke-test binaries (reproducible; see each crate's README)
+/crates/meco-uniffi/bindings/
+/crates/meco-uniffi/test/swift_smoke
+/crates/meco-cabi/test/meco_smoke
+/crates/meco-wasm/pkg/
+/crates/meco-wasm/web/pkg/
+/crates/meco-wasm/web/fonts/
+/bindings/php/prebuilt/
+/bindings/swift/MecoFFI.xcframework
+/bindings/swift/Sources/Meco/meco_uniffi.swift
+/bindings/android/src/main/jniLibs/
+/bindings/android/src/main/kotlin/
