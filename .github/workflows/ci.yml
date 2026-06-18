@@ -1,0 +1,20 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      # Unit tests + the 11,492-row golden parity (vs the committed Java oracle output)
+      # + the randomized no-panic fuzz test, across the whole workspace.
+      - run: cargo test --workspace
+      # Ensure the web binding still compiles to wasm.
+      - run: cargo build -p meco-wasm --target wasm32-unknown-unknown
