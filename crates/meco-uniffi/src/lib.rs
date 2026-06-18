@@ -7,10 +7,12 @@ uniffi::setup_scaffolding!();
 use meco_core::CodeType;
 use std::str::FromStr;
 
+// Field is `reason`, not `message`: in the generated Kotlin this enum subclasses Throwable, whose
+// `message` member would clash (Swift/Python are unaffected).
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum MecoError {
-    #[error("{message}")]
-    Translate { message: String },
+    #[error("{reason}")]
+    Translate { reason: String },
 }
 
 /// Translate `input` from encoding `from` to `to`. `from`/`to` are canonical encoding names
@@ -19,11 +21,11 @@ pub enum MecoError {
 #[uniffi::export]
 pub fn translate(from: String, to: String, input: String) -> Result<String, MecoError> {
     let parse = |s: &str| {
-        CodeType::from_str(s).map_err(|e| MecoError::Translate { message: e.to_string() })
+        CodeType::from_str(s).map_err(|e| MecoError::Translate { reason: e.to_string() })
     };
     let from = parse(&from)?;
     let to = parse(&to)?;
-    meco_core::translate(from, to, &input).map_err(|e| MecoError::Translate { message: e.to_string() })
+    meco_core::translate(from, to, &input).map_err(|e| MecoError::Translate { reason: e.to_string() })
 }
 
 /// Library version.
