@@ -9,7 +9,9 @@ The core is verified **byte-exact** against the original Java library on an 11,4
 ## Encodings
 
 `Zvvnmod` (intermediate hub) · `Delehi` · `Menk_Shape` · `Menk_Letter` · `Z52` (zcode).
-Conversions route through the Zvvnmod hub. (`Oyun` / `Utn57` are recognized but not yet supported.)
+Portable conversions route through the Zvvnmod hub. `meco-utn57-command` adds canonical UTN #57
+output for desktop/server Rust deployments without adding process I/O to the portable core.
+(`Oyun` remains recognized but unsupported.)
 
 ## One core, every platform
 
@@ -27,6 +29,7 @@ Conversions route through the Zvvnmod hub. (`Oyun` / `Utn57` are recognized but 
 | Platform | Add it | Call |
 |---|---|---|
 | Rust | `meco-core = { path = "crates/meco-core" }` | `meco_core::translate(from, to, s)?` |
+| Rust desktop/server → UTN #57 | workspace crate `meco-utn57-command` | `meco_utn57_command::translate_to_utn57(from, s)?` |
 | PHP | `composer require zvvnmod/meco` | `Meco\Meco::translate(Meco::Z52, Meco::MENK_SHAPE, $s)` |
 | Web/Node | `npm install meco-wasm` | `translate("z52", "menk_shape", s)` |
 | iOS | SwiftPM / `pod 'Meco'` | `try translate(from: "z52", to: "menk_shape", input: s)` |
@@ -49,6 +52,7 @@ running the real Java `TranslateService`; the lookup tables under
 ## Layout
 
 - `crates/meco-core` — the engine (shape + letter subsystems, hub routing, generated tables)
+- `crates/meco-utn57-command` — opt-in desktop/server adapter from meco encodings to UTN #57
 - `crates/meco-cabi` · `crates/meco-uniffi` · `crates/meco-wasm` — bindings
 - `bindings/php` · `bindings/swift` · `bindings/android` — per-ecosystem packages
 - `tools/oracle-java` · `tools/table-gen` — the Java oracle + table generator

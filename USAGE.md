@@ -172,7 +172,9 @@ echo Meco::translate(Meco::Z52, Meco::MENK_SHAPE, $input);
 ---
 
 ### Notes
-- `from`/`to` accept the canonical names above; `oyun` / `utn57` are recognized but not yet supported.
+- The portable `translate(from, to, input)` bindings accept the canonical names above; `oyun` and
+  `utn57` remain unsupported there. Desktop/server Rust callers can opt into
+  `meco-utn57-command::translate_to_utn57`; see that crate's README for the explicit backend setup.
 - Unmappable in-range characters pass through unchanged (lenient policy).
 - Set the dynamic-loader path at runtime if the lib isn't installed system-wide:
   macOS `DYLD_LIBRARY_PATH`, Linux `LD_LIBRARY_PATH`, Windows put the `.dll` next to the executable.
