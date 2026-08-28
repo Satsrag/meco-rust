@@ -3,6 +3,7 @@
 
 use crate::code_mapper::StaticMap;
 use crate::shape::rule::ShapeTranslateRule;
+use crate::tables::zvvnmod_birga::menk_shape_birga_to_zvvnmod;
 use crate::tables::from_menk_shape::FROM_MENK_SHAPE;
 use crate::tables::menk_shape_block::MENK_SHAPE_NOT_SUPPORT;
 use crate::unicode::sorted_contains;
@@ -26,6 +27,11 @@ impl ShapeTranslateRule for MenkShapeFrom {
     }
 
     fn get_mapper_code(&self, _pre: &[char], fragment: &ShapeWordFragment) -> Option<&'static str> {
+        if let [character] = fragment.content() {
+            if let Some(zvvnmod) = menk_shape_birga_to_zvvnmod(*character) {
+                return Some(zvvnmod);
+            }
+        }
         MAP.get(&fragment.get_locate_key())
     }
 

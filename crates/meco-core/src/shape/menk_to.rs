@@ -4,6 +4,7 @@
 
 use crate::code_mapper::StaticMap;
 use crate::shape::rule::ShapeTranslateRule;
+use crate::tables::zvvnmod_birga::zvvnmod_birga_to_menk_shape;
 use crate::tables::to_menk_shape::TO_MENK_SHAPE;
 use crate::unicode::zvvnmod;
 use crate::word::char_type::CharType;
@@ -19,11 +20,15 @@ impl ShapeTranslateRule for MenkShapeTo {
     }
 
     fn contains(&self, fragment: &ShapeWordFragment) -> bool {
-        MAP.contains_key(&fragment.get_key())
+        let key = fragment.get_key();
+        zvvnmod_birga_to_menk_shape(&key).is_some() || MAP.contains_key(&key)
     }
 
     fn get_mapper_code(&self, pre: &[char], fragment: &ShapeWordFragment) -> Option<&'static str> {
         let key = fragment.get_key();
+        if let Some(menk_shape) = zvvnmod_birga_to_menk_shape(&key) {
+            return Some(menk_shape);
+        }
         if let Some(r) = reslove_tsatslaga(pre, &key) {
             return Some(r);
         }

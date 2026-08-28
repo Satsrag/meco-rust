@@ -2,6 +2,9 @@
 //! (dumped from the live Java maps) and are committed verbatim — DO NOT edit them by hand; re-run
 //! the dumper instead. Each is a sorted, binary-searchable static.
 
+/// Rust-owned ZVVNMOD Birga rules that intentionally override historical Java behavior.
+pub mod zvvnmod_birga;
+
 #[path = "generated/from_z52.rs"]
 pub mod from_z52;
 #[path = "generated/to_z52.rs"]

@@ -37,6 +37,9 @@ impl LetterTranslateRuleFrom for DelehiFrom {
         key: &str,
         nature: Nature,
     ) -> Option<&'static str> {
+        if key.trim_matches(' ') == "\u{180a}" {
+            return Some("\u{180a}");
+        }
         if let Some(r) = resolve_devsger_i(pre, key) {
             return Some(r);
         }
