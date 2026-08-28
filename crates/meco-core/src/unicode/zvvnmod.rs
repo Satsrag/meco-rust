@@ -1,6 +1,7 @@
 //! Zvvnmod (intermediate PUA) Unicode block predicates. Port of `word/ZvvnModUnicodeBlock.java`,
 //! backed by the generated membership sets (`tables::zvvnmod_block`).
 
+use crate::tables::zvvnmod_birga::{MENK_SHAPE_BIRGAS, ZVVNMOD_BIRGAS};
 use crate::tables::zvvnmod_block::{
     TO_Z52_PUNCTUATIONS, ZVVNMOD_CODES, ZVVNMOD_PUNCTUATIONS, ZVVNMOD_TAIL_CODES,
 };
@@ -21,6 +22,12 @@ pub fn is_zvvnmod_tail_code(c: char) -> bool {
 /// Java `ZvvnModUnicodeBlock.zvvnModPunctuations.contains`.
 #[inline]
 pub fn is_zvvnmod_punctuation(c: char) -> bool {
+    if sorted_contains(&ZVVNMOD_BIRGAS, c) {
+        return true;
+    }
+    if sorted_contains(&MENK_SHAPE_BIRGAS, c) {
+        return false;
+    }
     sorted_contains(ZVVNMOD_PUNCTUATIONS, c)
 }
 
@@ -47,5 +54,15 @@ mod tests {
         assert!(is_to_z52_punctuation('!'));
         assert!(is_to_z52_punctuation('?'));
         assert!(!is_to_z52_punctuation('\u{00b7}'));
+    }
+
+    #[test]
+    fn zvvnmod_birgas_replace_menk_shape_pua() {
+        for c in '\u{11660}'..='\u{11663}' {
+            assert!(is_zvvnmod_punctuation(c));
+        }
+        for c in '\u{e23f}'..='\u{e242}' {
+            assert!(!is_zvvnmod_punctuation(c));
+        }
     }
 }

@@ -10,8 +10,9 @@
 //! Design & decisions: `docs/superpowers/specs/2026-06-18-meco-rust-port-design.md`.
 //!
 //! Ground rules baked into this crate:
-//! - **Java is the authoritative behavior oracle.** Where the PHP port diverges, Java wins.
-//! - Conversions route through the intermediate **Zvvnmod** encoding (hub-and-spoke).
+//! - Generated Java tables are the historical behavior baseline; Rust-owned Zvvnmod rules may
+//!   intentionally override them when the project adopts corrected semantics.
+//! - Conversions route through the intermediate **Zvvnmod** encoding.
 //! - No I/O, no framework: this crate is pure compute and `#![forbid(unsafe_code)]`,
 //!   so it can later be wrapped for WASM (web), UniFFI (iOS/Android) and a C ABI (servers).
 //!
