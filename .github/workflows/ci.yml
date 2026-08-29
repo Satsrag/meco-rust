@@ -16,5 +16,13 @@ jobs:
       # Unit tests + the 11,492-row golden parity (vs the committed Java oracle output)
       # + the randomized no-panic fuzz test, across the whole workspace.
       - run: cargo test --workspace
+      # The opt-in desktop/server adapter needs its separately provisioned Python backend.
+      # Installing a Rust dependency alone must not provision that runtime.
+      - name: Install and verify the UTN 57 normalization backend
+        run: |
+          cargo install zvvnmod-utn57 --version '=0.1.0-alpha.2' --locked
+          zvvnmod-install-mongol-norm
+      - name: Run the real meco → ZVVNMOD → UTN 57 integration
+        run: cargo test -p meco-utn57-command --test translate_to_utn57 -- --ignored
       # Ensure the web binding still compiles to wasm.
       - run: cargo build -p meco-wasm --target wasm32-unknown-unknown
