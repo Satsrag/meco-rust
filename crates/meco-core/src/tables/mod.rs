@@ -4,6 +4,8 @@
 
 /// Rust-owned ZVVNMOD Birga rules that intentionally override historical Java behavior.
 pub mod zvvnmod_birga;
+/// Rust-owned strict Z52 punctuation encoding backed by first-party font and IME evidence.
+pub mod z52_punctuation;
 
 #[path = "generated/from_z52.rs"]
 pub mod from_z52;
@@ -64,6 +66,10 @@ mod tests {
     fn expected_counts() {
         assert_eq!(super::from_z52::FROM_Z52.len(), 440);
         assert_eq!(super::to_z52::TO_Z52.len(), 144);
+        assert_eq!(super::z52_punctuation::UNICODE_TO_Z52_PUNCTUATION.len(), 21);
+        assert!(super::z52_punctuation::UNICODE_TO_Z52_PUNCTUATION
+            .windows(2)
+            .all(|window| window[0].0 < window[1].0));
         assert_eq!(super::from_menk_shape::FROM_MENK_SHAPE.len(), 2738);
         assert_eq!(super::to_menk_shape::TO_MENK_SHAPE.len(), 223);
     }
