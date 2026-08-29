@@ -56,7 +56,7 @@ fn load() -> Vec<Row> {
 #[test]
 fn corpus_parses_and_is_sane() {
     let rows = load();
-    assert!(rows.len() > 10_000, "expected >10k golden rows, got {}", rows.len());
+    assert_eq!(rows.len(), 11_492, "golden corpus size changed");
     // This Delehi corpus converts cleanly in Java — no throws.
     assert!(rows.iter().all(|r| !r.threw), "unexpected throw rows in clean corpus");
     // Sanity: a Delehi->Zvvnmod row has Mongolian (U+18xx) input and PUA (U+Exxx) Zvvnmod output.
@@ -133,6 +133,41 @@ fn zvvnmod_rust_expected(row: &Row) -> Option<&'static str> {
     }
 }
 
+fn strict_z52_target_expected(row: &Row, base: &str) -> Option<String> {
+    if row.to != "Z52" {
+        return None;
+    }
+
+    let output: String = base
+        .chars()
+        .map(|character| match character {
+            '\u{00b7}' => '\u{184f}',
+            '\u{2048}' => '\u{1850}',
+            '\u{2049}' => '\u{1851}',
+            '!' => '\u{1852}',
+            '?' => '\u{1853}',
+            ';' => '\u{1854}',
+            '(' => '\u{1855}',
+            ')' => '\u{1856}',
+            '\u{3008}' => '\u{1857}',
+            '\u{3009}' => '\u{1858}',
+            '\u{3014}' => '\u{1859}',
+            '\u{3015}' => '\u{185a}',
+            '\u{300a}' => '\u{185b}',
+            '\u{300b}' => '\u{185c}',
+            '\u{300e}' => '\u{185d}',
+            '\u{300f}' => '\u{185e}',
+            ',' => '\u{185f}',
+            '\u{00d7}' => '\u{1860}',
+            '\u{203b}' => '\u{1861}',
+            '-' => '\u{1862}',
+            '|' => '\u{1863}',
+            _ => character,
+        })
+        .collect();
+    (output != base).then_some(output)
+}
+
 /// Byte-exact parity vs the Java oracle for every (from,to) among the IMPLEMENTED encodings.
 /// Covers the urgent Z52<->MenkShape plus all Delehi<->{Zvvnmod,Z52,Menk_Shape} cross paths.
 #[test]
@@ -140,6 +175,7 @@ fn parity_implemented_paths() {
     let rows = load();
     let mut checked = 0usize;
     let mut zvvnmod_policy_rows = 0usize;
+    let mut strict_z52_policy_rows = 0usize;
     for r in &rows {
         if !IMPLEMENTED.contains(&r.from.as_str()) || !IMPLEMENTED.contains(&r.to.as_str()) {
             continue;
@@ -150,12 +186,17 @@ fn parity_implemented_paths() {
         let got = meco_core::translate(from, to, &r.input).unwrap_or_else(|e| {
             panic!("{} -> {} errored ({e}) on input {}", r.from, r.to, escape(&r.input))
         });
-        let expected = if let Some(expected) = zvvnmod_rust_expected(r) {
+        let base_expected = if let Some(expected) = zvvnmod_rust_expected(r) {
             zvvnmod_policy_rows += 1;
             expected
         } else {
             r.output.as_str()
         };
+        let strict_z52_expected = strict_z52_target_expected(r, base_expected);
+        if strict_z52_expected.is_some() {
+            strict_z52_policy_rows += 1;
+        }
+        let expected = strict_z52_expected.as_deref().unwrap_or(base_expected);
         assert_eq!(
             got,
             expected,
@@ -168,11 +209,16 @@ fn parity_implemented_paths() {
         );
         checked += 1;
     }
-    // Every implemented row is checked; only 20 exact rows use reviewed Zvvnmod-policy outputs.
-    assert!(checked > 11000, "expected >11000 implemented-path rows, got {checked}");
+    // Every implemented row is checked; Rust policy rows are transformed exactly, never skipped.
+    assert_eq!(checked, 11_492, "implemented-path row count changed");
     assert_eq!(zvvnmod_policy_rows, 20, "Zvvnmod policy corpus changed");
+    assert_eq!(
+        strict_z52_policy_rows, 729,
+        "strict Z52 punctuation corpus changed"
+    );
     eprintln!(
         "parity_implemented_paths: {checked} rows checked; \
-         {zvvnmod_policy_rows} rows use explicit Zvvnmod Rust expectations"
+         {zvvnmod_policy_rows} rows use explicit Zvvnmod Rust expectations; \
+         {strict_z52_policy_rows} rows use strict Z52 punctuation expectations"
     );
 }
