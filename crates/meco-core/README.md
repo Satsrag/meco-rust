@@ -9,7 +9,9 @@ hub. The minimum supported Rust version is 1.82.
 ```rust
 use meco_core::{translate, CodeType};
 
-let output = translate(CodeType::MenkShape, CodeType::Zvvnmod, input)?;
+let input = "\u{E0E5}";
+let output = translate(CodeType::MenkShape, CodeType::Zvvnmod, input)
+    .expect("ZVVNMOD conversion should succeed");
 ```
 
 ## Optional UTN #57 output
@@ -19,13 +21,15 @@ Canonical UTN #57 Unicode output is available through the same API with the expl
 
 ```toml
 [dependencies]
-meco-core = { version = "0.1.0", features = ["utn57-command"] }
+meco-core = { version = "0.2.0", features = ["utn57-command"] }
 ```
 
 ```rust
 use meco_core::{translate, CodeType};
 
-let output = translate(CodeType::MenkShape, CodeType::Utn57, input)?;
+let input = "\u{E0E5}";
+let output = translate(CodeType::MenkShape, CodeType::Utn57, input)
+    .expect("UTN #57 conversion should succeed");
 ```
 
 The feature adds the command-backed `zvvnmod-utn57` integration but does not install Python or

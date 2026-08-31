@@ -135,7 +135,7 @@ import uniffi.meco_uniffi.translate
 val out = translate("z52", "menk_shape", input)
 ```
 
-## iOS / macOS — Swift
+## iOS — Swift
 
 Download `MecoSwift.xcframework.zip`. Drag the `.xcframework` into Xcode and add `meco_uniffi.swift`
 (or use a local SwiftPM `binaryTarget`).
@@ -143,7 +143,7 @@ Download `MecoSwift.xcframework.zip`. Drag the `.xcframework` into Xcode and add
 let out = try translate(from: "z52", to: "menk_shape", input: s)
 ```
 
-## iOS / macOS — Objective-C
+## iOS — Objective-C
 
 Download `MecoC.xcframework.zip` (the C ABI). Add it to the project, then call C directly:
 ```objc
@@ -152,12 +152,20 @@ char *out = meco_translate("z52", "menk_shape", s.UTF8String);
 if (out) { NSString *r = @(out); meco_free(out); /* use r */ }
 ```
 
-## Web / Node / edge — JavaScript
+## Browser / web bundler — JavaScript
 
-Download `meco-wasm-<ver>.tgz`, then `npm install ./meco-wasm-<ver>.tgz`.
+Download `meco-wasm-web-<ver>.tgz`, then `npm install ./meco-wasm-web-<ver>.tgz`.
 ```js
 import init, { translate } from "meco-wasm";
 await init();
+translate("z52", "menk_shape", input);
+```
+
+## Node.js — JavaScript
+
+Download `meco-wasm-nodejs-<ver>.tgz`, then `npm install ./meco-wasm-nodejs-<ver>.tgz`.
+```js
+const { translate } = require("meco-wasm");
 translate("z52", "menk_shape", input);
 ```
 
