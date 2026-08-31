@@ -9,7 +9,9 @@ The core is verified **byte-exact** against the original Java library on an 11,4
 ## Encodings
 
 `Zvvnmod` (intermediate hub) · `Delehi` · `Menk_Shape` · `Menk_Letter` · `Z52` (zcode).
-Conversions route through the Zvvnmod hub. (`Oyun` / `Utn57` are recognized but not yet supported.)
+Portable conversions route through the Zvvnmod hub. `Oyun` remains recognized but unsupported.
+`Utn57` is available as an output through the opt-in `meco-utn57-command` adapter; reverse
+conversion from UTN #57 remains unsupported.
 
 ## One core, every platform
 
@@ -22,11 +24,17 @@ Conversions route through the Zvvnmod hub. (`Oyun` / `Utn57` are recognized but 
    web/Node       iOS                 Android              PHP-FFI / cgo         JNI · Panama
 ```
 
+`meco-utn57-command` is deliberately outside that portable core. It composes
+`source → meco-core → ZVVNMOD → zvvnmod-utn57 → canonical Unicode` for server/desktop
+deployments that explicitly install the reviewed `mongol-norm` command backend. Adding the Rust
+dependency alone never installs Python packages or runs a downloader.
+
 ## Quick start
 
 | Platform | Add it | Call |
 |---|---|---|
 | Rust | `meco-core = { path = "crates/meco-core" }` | `meco_core::translate(from, to, s)?` |
+| Rust + UTN #57 output | `meco-utn57-command = { path = "crates/meco-utn57-command" }` | `meco_utn57_command::translate(from, CodeType::Utn57, s)?` |
 | PHP | `composer require zvvnmod/meco` | `Meco\Meco::translate(Meco::Z52, Meco::MENK_SHAPE, $s)` |
 | Web/Node | `npm install meco-wasm` | `translate("z52", "menk_shape", s)` |
 | iOS | SwiftPM / `pod 'Meco'` | `try translate(from: "z52", to: "menk_shape", input: s)` |
@@ -39,7 +47,7 @@ package-manager account needed. **[DISTRIBUTION.md](DISTRIBUTION.md)** — optio
 ## Build & verify
 
 ```sh
-cargo test                 # 21 unit tests + 11,492-row golden parity vs the Java oracle
+cargo test --workspace     # unit tests + 11,492-row golden parity vs the Java oracle
 ```
 
 The golden corpus (`crates/meco-core/tests/golden/golden.tsv`) is produced by `tools/oracle-java`
@@ -49,6 +57,7 @@ running the real Java `TranslateService`; the lookup tables under
 ## Layout
 
 - `crates/meco-core` — the engine (shape + letter subsystems, hub routing, generated tables)
+- `crates/meco-utn57-command` — opt-in server/desktop adapter for canonical UTN #57 output
 - `crates/meco-cabi` · `crates/meco-uniffi` · `crates/meco-wasm` — bindings
 - `bindings/php` · `bindings/swift` · `bindings/android` — per-ecosystem packages
 - `tools/oracle-java` · `tools/table-gen` — the Java oracle + table generator

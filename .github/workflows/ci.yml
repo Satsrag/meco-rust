@@ -16,5 +16,10 @@ jobs:
       # Unit tests + the 11,492-row golden parity (vs the committed Java oracle output)
       # + the randomized no-panic fuzz test, across the whole workspace.
       - run: cargo test --workspace
+      # The portable core never needs Python. Only the opt-in server/desktop adapter
+      # provisions its reviewed command backend before the real integration test.
+      - run: cargo install zvvnmod-utn57 --version 0.1.0-alpha.3 --locked
+      - run: zvvnmod-install-mongol-norm
+      - run: cargo test -p meco-utn57-command --test translate -- --ignored
       # Ensure the web binding still compiles to wasm.
       - run: cargo build -p meco-wasm --target wasm32-unknown-unknown
