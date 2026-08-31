@@ -18,9 +18,8 @@ pub enum CodeSeries {
 /// The supported Mongolian encodings. One variant per Java `CodeType` (in declaration order).
 /// `Zvvnmod` is the intermediate hub. Port of `CodeType.java` lines 14-20.
 ///
-/// `Oyun` and `Utn57` are parseable and present for forward-compatibility but are **not yet
-/// supported** for conversion (decisions #2 and the 2026-06-18 Utn57 deferral): `translate`
-/// returns [`MecoError::Unsupported`] for them and they are excluded from `supported_paths()`.
+/// `Oyun` and `Utn57` are parseable. `Oyun` and UTN #57 as a source remain unsupported; UTN #57
+/// is available as a target when `meco-core` is built with the `utn57-command` feature.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum CodeType {
     Zvvnmod,

@@ -13,8 +13,8 @@
 //! - Generated Java tables are the historical behavior baseline; Rust-owned Zvvnmod rules may
 //!   intentionally override them when the project adopts corrected semantics.
 //! - Conversions route through the intermediate **Zvvnmod** encoding.
-//! - No I/O, no framework: this crate is pure compute and `#![forbid(unsafe_code)]`,
-//!   so it can later be wrapped for WASM (web), UniFFI (iOS/Android) and a C ABI (servers).
+//! - The default build has no I/O or framework and is pure compute. The explicit
+//!   `utn57-command` feature adds command-backed UTN #57 target conversion for servers/desktops.
 //!
 //! Status: scaffolding — the shared spine (encoding types, errors, string helpers) is in place.
 //! Translation routing and the shape/letter subsystems are added in later steps.

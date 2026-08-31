@@ -3,11 +3,19 @@ name = "meco-core"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
-description = "Mongolian Encoding Converter — pure Rust core, ported from the Java meco library. Java is the authoritative behavior oracle; PHP is reference-only."
+rust-version = "1.82"
+description = "Mongolian Encoding Converter — pure-by-default Rust core, ported from the Java meco library. Java is the authoritative behavior oracle; PHP is reference-only."
+readme = "README.md"
+repository = "https://github.com/Satsrag/meco-rust"
+homepage = "https://github.com/Satsrag/meco-rust"
+documentation = "https://docs.rs/meco-core"
 
 [lib]
 name = "meco_core"
 
+[features]
+default = []
+utn57-command = ["dep:zvvnmod-utn57"]
+
 [dependencies]
-# Intentionally dependency-free for now so the core builds fully offline.
-# thiserror may be adopted later once a network fetch is confirmed available.
+zvvnmod-utn57 = { version = "=0.1.0-alpha.3", optional = true }

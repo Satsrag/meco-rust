@@ -283,6 +283,9 @@ dependencies = [
 [[package]]
 name = "meco-core"
 version = "0.1.0"
+dependencies = [
+ "zvvnmod-utn57",
+]
 
 [[package]]
 name = "meco-uniffi"
@@ -804,3 +807,9 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
+
+[[package]]
+name = "zvvnmod-utn57"
+version = "0.1.0-alpha.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e13fed9732da046ab0dea3e6c9866308448cd1f306afd84d842bc20677a18d6"
