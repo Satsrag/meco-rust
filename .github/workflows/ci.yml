@@ -16,10 +16,14 @@ jobs:
       # Unit tests + the 11,492-row golden parity (vs the committed Java oracle output)
       # + the randomized no-panic fuzz test, across the whole workspace.
       - run: cargo test --workspace
-      # The portable core never needs Python. Only the opt-in server/desktop adapter
+      # The default portable core never needs Python. The explicit server/desktop feature
       # provisions its reviewed command backend before the real integration test.
       - run: cargo install zvvnmod-utn57 --version 0.1.0-alpha.3 --locked
       - run: zvvnmod-install-mongol-norm
-      - run: cargo test -p meco-utn57-command --test translate -- --ignored
+      - run: cargo test -p meco-core --features utn57-command
+      - run: cargo test -p meco-core --features utn57-command --test utn57_feature formal_zvvnmod_nirugu_converts_through_the_real_backend -- --exact --ignored
+      - run: cargo test -p meco-core --features utn57-command --test utn57_feature unavailable_backend_uses_the_existing_meco_error_channel -- --exact --ignored
+        env:
+          ZVVNMOD_MONGOL_NORM_PATH: /definitely/missing/mongol-norm
       # Ensure the web binding still compiles to wasm.
       - run: cargo build -p meco-wasm --target wasm32-unknown-unknown

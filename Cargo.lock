@@ -283,6 +283,9 @@ dependencies = [
 [[package]]
 name = "meco-core"
 version = "0.1.0"
+dependencies = [
+ "zvvnmod-utn57",
+]
 
 [[package]]
 name = "meco-uniffi"
@@ -291,14 +294,6 @@ dependencies = [
  "meco-core",
  "thiserror",
  "uniffi",
-]
-
-[[package]]
-name = "meco-utn57-command"
-version = "0.1.0"
-dependencies = [
- "meco-core",
- "zvvnmod-utn57",
 ]
 
 [[package]]

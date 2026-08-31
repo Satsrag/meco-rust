@@ -8,6 +8,9 @@ description = "Mongolian Encoding Converter — pure Rust core, ported from the 
 [lib]
 name = "meco_core"
 
+[features]
+default = []
+utn57-command = ["dep:zvvnmod-utn57"]
+
 [dependencies]
-# Intentionally dependency-free for now so the core builds fully offline.
-# thiserror may be adopted later once a network fetch is confirmed available.
+zvvnmod-utn57 = { version = "=0.1.0-alpha.3", optional = true }

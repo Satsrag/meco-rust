@@ -2,8 +2,8 @@
 //!
 //! Hub-and-spoke through Zvvnmod: decode `from` to the hub (unless it is the hub), then encode the
 //! hub to `to` (unless it is the hub). Short-circuit exactly as Java: identity or blank input is
-//! returned unchanged. Oyun and Utn57 are Unsupported (decisions); the LETTER series is Unsupported
-//! until Step 6 wires Delehi/MenkLetter.
+//! returned unchanged. Oyun and UTN #57 source text are Unsupported. UTN #57 is available as a
+//! target only when the `utn57-command` feature is enabled.
 
 use crate::code_type::{CodeSeries, CodeType};
 use crate::dispatch::{letter_from_rule, letter_to_rule, shape_from_rule, shape_to_rule};
@@ -30,7 +30,7 @@ pub fn translate(from: CodeType, to: CodeType, input: &str) -> Result<String, Me
 }
 
 fn translate_from(ct: CodeType, s: &str) -> Result<String, MecoError> {
-    // Oyun + Utn57 (GB/T 25914-2023) are deferred -> Unsupported (decisions #2 and 2026-06-18).
+    // Oyun and reverse conversion from canonical UTN #57 text remain deferred.
     if matches!(ct, CodeType::Oyun | CodeType::Utn57) {
         return Err(MecoError::Unsupported(ct));
     }
@@ -41,8 +41,19 @@ fn translate_from(ct: CodeType, s: &str) -> Result<String, MecoError> {
 }
 
 fn translate_to(ct: CodeType, s: &str) -> Result<String, MecoError> {
-    if matches!(ct, CodeType::Oyun | CodeType::Utn57) {
+    if ct == CodeType::Oyun {
         return Err(MecoError::Unsupported(ct));
+    }
+    if ct == CodeType::Utn57 {
+        #[cfg(feature = "utn57-command")]
+        {
+            return zvvnmod_utn57::convert_zvvnmod_to_utn57(s)
+                .map_err(|error| MecoError::Utn57(error.to_string()));
+        }
+        #[cfg(not(feature = "utn57-command"))]
+        {
+            return Err(MecoError::Unsupported(ct));
+        }
     }
     match ct.code_series() {
         CodeSeries::Shape => ShapeTranslator::new(shape_to_rule(ct)?).translate(s),

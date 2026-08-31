@@ -3,8 +3,9 @@
 //!
 //! Note (design decision #3): a content-level *unmappable code point* is **not** an error here —
 //! it is passed through unchanged. So [`MecoError::NotFoundInMapper`] is reserved for internal/
-//! diagnostic use; the public `translate` returns `Err` only for structural problems
-//! (unsupported encoding, unsupported series, unknown enum string).
+//! diagnostic use. The default build's public `translate` returns `Err` only for structural problems
+//! (unsupported encoding, unsupported series, unknown enum string). With `utn57-command`, backend
+//! failures are also returned through this same error channel.
 
 use crate::code_type::CodeType;
 use std::fmt;
@@ -21,8 +22,11 @@ pub enum MecoError {
     NotSupportedCodeSeries(CodeType),
     /// A string could not be parsed into a [`CodeType`].
     UnsupportedEnumType(String),
-    /// Conversion involving this code is not (yet) supported — currently `Oyun` and `Utn57`.
+    /// Conversion involving this code is not supported in the active build.
     Unsupported(CodeType),
+    /// The optional command-backed UTN #57 target conversion failed.
+    #[cfg(feature = "utn57-command")]
+    Utn57(String),
 }
 
 impl fmt::Display for MecoError {
@@ -34,6 +38,8 @@ impl fmt::Display for MecoError {
             MecoError::NotSupportedCodeSeries(ct) => write!(f, "unsupported code series for {ct:?}"),
             MecoError::UnsupportedEnumType(s) => write!(f, "unsupported encoding name: {s:?}"),
             MecoError::Unsupported(ct) => write!(f, "conversion not supported for {ct:?}"),
+            #[cfg(feature = "utn57-command")]
+            MecoError::Utn57(reason) => write!(f, "UTN #57 conversion failed: {reason}"),
         }
     }
 }

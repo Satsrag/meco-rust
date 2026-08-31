@@ -1,12 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-    "crates/meco-core",
-    "crates/meco-cabi",
-    "crates/meco-uniffi",
-    "crates/meco-wasm",
-    "crates/meco-utn57-command",
-]
+members = ["crates/meco-core", "crates/meco-cabi", "crates/meco-uniffi", "crates/meco-wasm"]
 
 # Future members (added as the port progresses):
 #   "tools/table-gen"   — generator that emits crates/meco-core/src/tables/generated/*.rs

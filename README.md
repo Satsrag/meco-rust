@@ -10,13 +10,13 @@ The core is verified **byte-exact** against the original Java library on an 11,4
 
 `Zvvnmod` (intermediate hub) · `Delehi` · `Menk_Shape` · `Menk_Letter` · `Z52` (zcode).
 Portable conversions route through the Zvvnmod hub. `Oyun` remains recognized but unsupported.
-`Utn57` is available as an output through the opt-in `meco-utn57-command` adapter; reverse
-conversion from UTN #57 remains unsupported.
+`Utn57` is available as an output when `meco-core`'s opt-in `utn57-command` feature is enabled;
+reverse conversion from UTN #57 remains unsupported.
 
 ## One core, every platform
 
 ```
-                         meco-core  (pure Rust, no deps, #![forbid(unsafe_code)])
+                         meco-core  (pure by default, #![forbid(unsafe_code)])
                          translate(from, to, &str) -> Result<String, MecoError>
    ┌───────────────┬───────────────────┬────────────────────┬─────────────────────┐
  meco-wasm       meco-uniffi         meco-uniffi          meco-cabi             meco-cabi
@@ -24,17 +24,35 @@ conversion from UTN #57 remains unsupported.
    web/Node       iOS                 Android              PHP-FFI / cgo         JNI · Panama
 ```
 
-`meco-utn57-command` is deliberately outside that portable core. It composes
+The explicit `utn57-command` feature composes
 `source → meco-core → ZVVNMOD → zvvnmod-utn57 → canonical Unicode` for server/desktop
-deployments that explicitly install the reviewed `mongol-norm` command backend. Adding the Rust
-dependency alone never installs Python packages or runs a downloader.
+deployments. Enabling the feature does not install Python packages or run a downloader; install the
+reviewed backend once with:
+
+```sh
+cargo install zvvnmod-utn57 --version 0.1.0-alpha.3 --locked
+zvvnmod-install-mongol-norm
+```
+
+The call remains the normal `meco-core` API:
+
+```rust
+use meco_core::{translate, CodeType};
+
+let output = translate(CodeType::MenkShape, CodeType::Utn57, input)?;
+```
+
+Without the feature, a non-identity conversion targeting `CodeType::Utn57` returns
+`MecoError::Unsupported(CodeType::Utn57)`. With the feature enabled, an unavailable or failing
+backend returns `MecoError::Utn57`; existing bindings continue mapping errors to their normal
+NULL/exception mechanism.
 
 ## Quick start
 
 | Platform | Add it | Call |
 |---|---|---|
 | Rust | `meco-core = { path = "crates/meco-core" }` | `meco_core::translate(from, to, s)?` |
-| Rust + UTN #57 output | `meco-utn57-command = { path = "crates/meco-utn57-command" }` | `meco_utn57_command::translate(from, CodeType::Utn57, s)?` |
+| Rust + UTN #57 output | `meco-core = { path = "crates/meco-core", features = ["utn57-command"] }` | `meco_core::translate(from, CodeType::Utn57, s)?` |
 | PHP | `composer require zvvnmod/meco` | `Meco\Meco::translate(Meco::Z52, Meco::MENK_SHAPE, $s)` |
 | Web/Node | `npm install meco-wasm` | `translate("z52", "menk_shape", s)` |
 | iOS | SwiftPM / `pod 'Meco'` | `try translate(from: "z52", to: "menk_shape", input: s)` |
@@ -57,7 +75,6 @@ running the real Java `TranslateService`; the lookup tables under
 ## Layout
 
 - `crates/meco-core` — the engine (shape + letter subsystems, hub routing, generated tables)
-- `crates/meco-utn57-command` — opt-in server/desktop adapter for canonical UTN #57 output
 - `crates/meco-cabi` · `crates/meco-uniffi` · `crates/meco-wasm` — bindings
 - `bindings/php` · `bindings/swift` · `bindings/android` — per-ecosystem packages
 - `tools/oracle-java` · `tools/table-gen` — the Java oracle + table generator
