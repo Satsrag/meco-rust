@@ -25,7 +25,6 @@ pub enum MecoError {
     /// Conversion involving this code is not supported in the active build.
     Unsupported(CodeType),
     /// The optional command-backed UTN #57 target conversion failed.
-    #[cfg(feature = "utn57-command")]
     Utn57(String),
 }
 
@@ -38,7 +37,6 @@ impl fmt::Display for MecoError {
             MecoError::NotSupportedCodeSeries(ct) => write!(f, "unsupported code series for {ct:?}"),
             MecoError::UnsupportedEnumType(s) => write!(f, "unsupported encoding name: {s:?}"),
             MecoError::Unsupported(ct) => write!(f, "conversion not supported for {ct:?}"),
-            #[cfg(feature = "utn57-command")]
             MecoError::Utn57(reason) => write!(f, "UTN #57 conversion failed: {reason}"),
         }
     }

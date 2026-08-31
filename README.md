@@ -64,6 +64,9 @@ package-manager account needed. **[DISTRIBUTION.md](DISTRIBUTION.md)** — optio
 
 ## Build & verify
 
+`meco-core` declares Rust 1.82 as its minimum supported Rust version, matching the optional
+`zvvnmod-utn57` dependency.
+
 ```sh
 cargo test --workspace     # unit tests + 11,492-row golden parity vs the Java oracle
 ```
