@@ -14,6 +14,25 @@ let output = translate(CodeType::MenkShape, CodeType::Zvvnmod, input)
     .expect("ZVVNMOD conversion should succeed");
 ```
 
+## Command line
+
+The package also installs a `meco` binary without changing how Rust projects depend on the library:
+
+```sh
+cargo install meco-core --version 0.2.1 --locked
+meco translate --from z52 --to menk_shape 'text'
+```
+
+Omit the final text argument to read UTF-8 from stdin. Output is written unchanged to stdout without
+an extra newline, so the command is safe in pipelines:
+
+```sh
+printf '%s' 'text' | meco translate --from z52 --to menk_shape
+```
+
+Run `meco --help` for the canonical encoding names and `meco --version` to verify the installed
+release.
+
 ## Optional UTN #57 output
 
 Canonical UTN #57 Unicode output is available through the same API with the explicit
@@ -21,7 +40,13 @@ Canonical UTN #57 Unicode output is available through the same API with the expl
 
 ```toml
 [dependencies]
-meco-core = { version = "0.2.0", features = ["utn57-command"] }
+meco-core = { version = "0.2.1", features = ["utn57-command"] }
+```
+
+The feature is also available to the CLI:
+
+```sh
+cargo install meco-core --version 0.2.1 --features utn57-command --locked
 ```
 
 ```rust

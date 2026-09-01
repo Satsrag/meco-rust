@@ -22,6 +22,44 @@ const char *meco_version(void);
 
 ---
 
+## Desktop / server command line
+
+The `meco-core` crate is both a Rust library and an installable command. After the release is on
+crates.io:
+
+```sh
+cargo install meco-core --version 0.2.1 --locked
+```
+
+Convert a command-line argument:
+
+```sh
+meco translate --from z52 --to menk_shape 'text'
+```
+
+Or read UTF-8 from stdin for shell pipelines and server jobs:
+
+```sh
+printf '%s' 'text' | meco translate --from z52 --to menk_shape
+```
+
+The converter writes only the translated UTF-8 bytes to stdout and does not append a newline.
+Errors go to stderr and return a non-zero exit status. `meco --help` lists canonical encoding names.
+
+To enable `--to utn57` on desktop/server, install the optional command-backed feature and its
+reviewed backend:
+
+```sh
+cargo install meco-core --version 0.2.1 --features utn57-command --locked
+cargo install zvvnmod-utn57 --version 0.1.0-alpha.3 --locked
+zvvnmod-install-mongol-norm
+```
+
+The Web, Android, iOS, and prebuilt C artifacts remain pure-by-default and do not include this
+external command backend.
+
+---
+
 ## C / C++
 
 Download `meco-c-<platform>.zip`. `#include "meco.h"`, link `-lmeco`.
@@ -180,7 +218,8 @@ echo Meco::translate(Meco::Z52, Meco::MENK_SHAPE, $input);
 ---
 
 ### Notes
-- `from`/`to` accept the canonical names above; `oyun` / `utn57` are recognized but not yet supported.
+- `from`/`to` accept the canonical names above. `oyun` remains unsupported. `utn57` is output-only
+  and is available only in Rust/library or CLI builds with `utn57-command`; prebuilt bindings omit it.
 - Unmappable in-range characters pass through unchanged (lenient policy).
 - Set the dynamic-loader path at runtime if the lib isn't installed system-wide:
   macOS `DYLD_LIBRARY_PATH`, Linux `LD_LIBRARY_PATH`, Windows put the `.dll` next to the executable.

@@ -9,12 +9,13 @@ and the per-language packages sit at the repo root, like `meco_php`/`meco_dart` 
 
 | Platform | Add to a project | Backed by |
 |---|---|---|
+| **Desktop / server CLI** | `cargo install meco-core --version 0.2.1 --locked` | `meco-core` binary + library |
 | **PHP** (server) | `composer require zvvnmod/meco` | `meco-cabi` C ABI via FFI |
 | **Browser / web bundler** | Install `meco-wasm-web-*.tgz` from the GitHub Release | `meco-wasm` (wasm-bindgen web target) |
 | **Node.js** | Install `meco-wasm-nodejs-*.tgz` from the GitHub Release | `meco-wasm` (wasm-bindgen nodejs target) |
 | **iOS** (SwiftPM) | Download `MecoSwift.xcframework.zip` from the GitHub Release | `meco-uniffi` (Swift) |
 | **iOS** (CocoaPods) | `pod 'Meco'` | `meco-uniffi` (Swift) |
-| **Android** (Gradle) | `implementation("com.zvvnmod:meco-android:0.2.0")` | `meco-uniffi` (Kotlin) |
+| **Android** (Gradle) | `implementation("com.zvvnmod:meco-android:0.2.1")` | `meco-uniffi` (Kotlin) |
 | **Go / Java / Python…** | load `libmeco.{so,dylib}` (cgo / Panama-JNI / ctypes) | `meco-cabi` C ABI |
 
 Usage is the same everywhere: `translate(from, to, input)` with names
@@ -38,15 +39,15 @@ then creates the GitHub Release. Every stage is fail-closed. The tagged version 
 The workflow resolves the current remote tag again immediately before publication and before
 creating the GitHub Release, so a moved tag fails closed.
 
-Before the first tag, the repository owner must create a protected GitHub environment named
-`crates-io` and add an environment secret named `CARGO_REGISTRY_TOKEN`. Because `meco-core` has
-not been published before, crates.io currently requires an API token for this initial publication.
-Use a short-lived token that can create the package, protect the environment with required review
-and a `v*` deployment rule, and add a repository tag ruleset that restricts creation, updates, and
-deletion of `v*` tags to release maintainers. Never put the token in the repository, a PR, a tag
-command, or workflow logs. After the first successful publish, replace the token-based publish step
-with crates.io Trusted Publishing (GitHub OIDC plus a pinned crates.io auth action), verify that
-updated workflow, and only then revoke the initial token.
+The repository owner must configure Trusted Publishing under the `meco-core` crate's crates.io
+settings with GitHub owner `Satsrag`, repository `meco-rust`, workflow filename `release.yml`, and
+environment `crates-io`. The publish job grants only `id-token: write`; the SHA-pinned crates.io auth
+action exchanges GitHub's OIDC identity for a 30-minute publishing token and exposes it only to the
+`cargo publish` step. No long-lived `CARGO_REGISTRY_TOKEN` secret is stored in GitHub.
+
+Keep the protected GitHub environment named `crates-io`, require release review, allow only `v*`
+tag deployments, and maintain a repository tag ruleset restricting creation, updates, and deletion
+of `v*` tags to release maintainers.
 
 The workflow builds and uploads per-platform `libmeco`, the iOS `MecoSwift.xcframework` and
 `MecoC.xcframework`, the Android `.aar`, and the wasm npm tarball. The GitHub Release is created
@@ -63,7 +64,7 @@ Release assets; those ecosystem registries remain separate follow-up steps.
 Rust consumers can enable the optional UTN #57 target through the normal core API:
 
 ```toml
-meco-core = { version = "0.2.0", features = ["utn57-command"] }
+meco-core = { version = "0.2.1", features = ["utn57-command"] }
 ```
 
 The command-backed feature still requires the explicit backend setup documented in
