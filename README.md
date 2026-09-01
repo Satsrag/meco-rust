@@ -51,13 +51,25 @@ NULL/exception mechanism.
 
 | Platform | Add it | Call |
 |---|---|---|
-| Rust | `meco-core = { path = "crates/meco-core" }` | `meco_core::translate(from, to, s)?` |
-| Rust + UTN #57 output | `meco-core = { path = "crates/meco-core", features = ["utn57-command"] }` | `meco_core::translate(from, CodeType::Utn57, s)?` |
+| Desktop/server CLI | `cargo install meco-core --version 0.2.1 --locked` | `meco translate --from z52 --to menk_shape '…'` |
+| Rust | `meco-core = "0.2.1"` | `meco_core::translate(from, to, s)?` |
+| Rust + UTN #57 output | `meco-core = { version = "0.2.1", features = ["utn57-command"] }` | `meco_core::translate(from, CodeType::Utn57, s)?` |
 | PHP | `composer require zvvnmod/meco` | `Meco\Meco::translate(Meco::Z52, Meco::MENK_SHAPE, $s)` |
 | Browser/web | Install `meco-wasm-web-*.tgz` from the GitHub Release | `translate("z52", "menk_shape", s)` |
 | Node.js | Install `meco-wasm-nodejs-*.tgz` from the GitHub Release | `translate("z52", "menk_shape", s)` |
 | iOS | Download `MecoSwift.xcframework.zip` from the GitHub Release | `try translate(from: "z52", to: "menk_shape", input: s)` |
 | Android | `implementation("com.zvvnmod:meco-android:…")` | `translate("z52", "menk_shape", s)` |
+
+The same `meco-core` package remains a normal Rust library and also installs the `meco` command:
+
+```sh
+cargo install meco-core --version 0.2.1 --locked
+meco translate --from z52 --to menk_shape 'text'
+printf '%s' 'text' | meco translate --from z52 --to menk_shape
+```
+
+For command-line UTN #57 output, install `meco-core` with `--features utn57-command` and perform the
+one-time backend setup shown above. The default CLI stays pure and supports all portable routes.
 
 **[USAGE.md](USAGE.md)** — download the prebuilt artifacts from [Releases](../../releases) and use
 them on each platform (C / Go / Python / Dart / Java / Android / Swift / ObjC / Web / PHP), no

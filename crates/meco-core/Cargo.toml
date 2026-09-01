@@ -1,10 +1,10 @@
 [package]
 name = "meco-core"
-version = "0.2.0"
+version = "0.2.1"
 edition.workspace = true
 license.workspace = true
 rust-version = "1.82"
-description = "Mongolian Encoding Converter — pure-by-default Rust core, ported from the Java meco library. Java is the authoritative behavior oracle; PHP is reference-only."
+description = "Mongolian Encoding Converter — pure-by-default Rust library and CLI, ported from Java meco."
 readme = "README.md"
 repository = "https://github.com/Satsrag/meco-rust"
 homepage = "https://github.com/Satsrag/meco-rust"
@@ -12,6 +12,10 @@ documentation = "https://docs.rs/meco-core"
 
 [lib]
 name = "meco_core"
+
+[[bin]]
+name = "meco"
+path = "src/bin/meco.rs"
 
 [features]
 default = []
