@@ -24,8 +24,8 @@ const char *meco_version(void);
 
 ## Desktop / server command line
 
-The `meco-core` crate is both a Rust library and an installable command. After the release is on
-crates.io:
+The `meco-core` crate is both a Rust library and an installable command. Install the published
+release from crates.io:
 
 ```sh
 cargo install meco-core --version 0.2.1 --locked
@@ -164,9 +164,9 @@ if (p != null) MecoLib.I.meco_free(p);
 
 ## Android
 
-Download `meco-<ver>.aar`. In `build.gradle`:
+Download `meco-android-release.aar`. In `build.gradle`:
 ```kotlin
-dependencies { implementation(files("libs/meco.aar")); implementation("net.java.dev.jna:jna:5.14.0@aar") }
+dependencies { implementation(files("libs/meco-android-release.aar")); implementation("net.java.dev.jna:jna:5.14.0@aar") }
 ```
 ```kotlin
 import uniffi.meco_uniffi.translate
