@@ -16,8 +16,8 @@ pub enum MecoError {
 }
 
 /// Translate `input` from encoding `from` to `to`. `from`/`to` are canonical encoding names
-/// ("zvvnmod", "delehi", "menk_shape", "menk_letter", "z52"). Throws on an unknown encoding or an
-/// unsupported conversion. UTF-8 throughout (Swift `String` / Kotlin `String`).
+/// ("zvvnmod", "delehi", "menk_shape", "menk_letter", "z52", plus the output-only "utn57").
+/// Throws on an unknown encoding or an unsupported conversion. UTF-8 throughout (Swift `String` / Kotlin `String`).
 #[uniffi::export]
 pub fn translate(from: String, to: String, input: String) -> Result<String, MecoError> {
     let parse = |s: &str| {

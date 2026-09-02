@@ -26,6 +26,8 @@ final class Meco
     public const MENK_SHAPE = 'menk_shape';
     public const MENK_LETTER = 'menk_letter';
     public const Z52 = 'z52';
+    /** Canonical UTN #57 Unicode. Output-only: valid as $to, rejected as $from. */
+    public const UTN57 = 'utn57';
 
     private static ?\FFI $ffi = null;
 

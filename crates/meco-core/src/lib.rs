@@ -13,8 +13,9 @@
 //! - Generated Java tables are the historical behavior baseline; Rust-owned Zvvnmod rules may
 //!   intentionally override them when the project adopts corrected semantics.
 //! - Conversions route through the intermediate **Zvvnmod** encoding.
-//! - The default build has no I/O or framework and is pure compute. The explicit
-//!   `utn57-command` feature adds command-backed UTN #57 target conversion for servers/desktops.
+//! - The build has no I/O or framework and is pure compute on every platform, including
+//!   `wasm32-unknown-unknown`. UTN #57 target conversion is linked in through the pure-Rust
+//!   `zvvnmod-utn57` crate; no external command or interpreter is started.
 //!
 //! Status: scaffolding — the shared spine (encoding types, errors, string helpers) is in place.
 //! Translation routing and the shape/letter subsystems are added in later steps.

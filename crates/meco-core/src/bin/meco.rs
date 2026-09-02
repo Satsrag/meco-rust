@@ -12,7 +12,7 @@ fn help(program: &str) -> String {
 Usage:\n  {program} translate --from <encoding> --to <encoding> [text]\n\n\
 When [text] is omitted, meco reads UTF-8 text from stdin. Converted UTF-8 text is written to stdout without adding a newline.\n\n\
 Encodings:\n  zvvnmod\n  delehi\n  menk_shape\n  menk_letter\n  oyun\n  utn57\n  z52\n\n\
-UTN #57 is an output-only target and requires installation with the utn57-command feature.\n"
+UTN #57 is an output-only target; oyun is not supported.\n"
     )
 }
 

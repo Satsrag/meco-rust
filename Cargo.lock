@@ -275,21 +275,21 @@ checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
 
 [[package]]
 name = "meco-cabi"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "meco-core",
 ]
 
 [[package]]
 name = "meco-core"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "zvvnmod-utn57",
 ]
 
 [[package]]
 name = "meco-uniffi"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "meco-core",
  "thiserror",
@@ -298,7 +298,7 @@ dependencies = [
 
 [[package]]
 name = "meco-wasm"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "meco-core",
  "wasm-bindgen",
@@ -315,6 +315,12 @@ name = "minimal-lexical"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
+
+[[package]]
+name = "mongol-norm"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d7f32055e52003c405d082eb36c8ac71554877f2f5d4daa5f3cc90f65e65ffb"
 
 [[package]]
 name = "nom"
@@ -810,6 +816,9 @@ checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
 
 [[package]]
 name = "zvvnmod-utn57"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e13fed9732da046ab0dea3e6c9866308448cd1f306afd84d842bc20677a18d6"
+checksum = "aace62551a2fe776d170cdae537d2bf3ab524a5c7715c3ab0483a6d13313a4c6"
+dependencies = [
+ "mongol-norm",
+]

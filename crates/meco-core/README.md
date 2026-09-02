@@ -1,8 +1,10 @@
 # meco-core
 
-`meco-core` is the pure-by-default Rust engine for the Mongolian Encoding Converter. It supports
-`Zvvnmod`, `Delehi`, `MenkShape`, `MenkLetter`, and `Z52`; conversions route through the Zvvnmod
-hub. The minimum supported Rust version is 1.82.
+`meco-core` is the pure-Rust engine for the Mongolian Encoding Converter. It converts among
+`Zvvnmod`, `Delehi`, `MenkShape`, `MenkLetter`, and `Z52`, and emits canonical UTN #57 Unicode as
+an output-only target; conversions route through the Zvvnmod hub. Everything runs in process with
+no I/O, so the crate builds for `wasm32-unknown-unknown` as well as native targets. The minimum
+supported Rust version is 1.82.
 
 ## Basic use
 
@@ -19,7 +21,7 @@ let output = translate(CodeType::MenkShape, CodeType::Zvvnmod, input)
 The package also installs a `meco` binary without changing how Rust projects depend on the library:
 
 ```sh
-cargo install meco-core --version 0.2.1 --locked
+cargo install meco-core --version 0.3.0 --locked
 meco translate --from z52 --to menk_shape 'text'
 ```
 
@@ -33,21 +35,9 @@ printf '%s' 'text' | meco translate --from z52 --to menk_shape
 Run `meco --help` for the canonical encoding names and `meco --version` to verify the installed
 release.
 
-## Optional UTN #57 output
+## UTN #57 output
 
-Canonical UTN #57 Unicode output is available through the same API with the explicit
-`utn57-command` feature:
-
-```toml
-[dependencies]
-meco-core = { version = "0.2.1", features = ["utn57-command"] }
-```
-
-The feature is also available to the CLI:
-
-```sh
-cargo install meco-core --version 0.2.1 --features utn57-command --locked
-```
+Canonical UTN #57 Unicode output is part of the default build and uses the same API:
 
 ```rust
 use meco_core::{translate, CodeType};
@@ -55,30 +45,27 @@ use meco_core::{translate, CodeType};
 let input = "\u{E0E5}";
 let output = translate(CodeType::MenkShape, CodeType::Utn57, input)
     .expect("UTN #57 conversion should succeed");
+assert_eq!(output, "\u{180A}");
 ```
 
-The feature adds the command-backed `zvvnmod-utn57` integration but does not install Python or
-run a downloader during the Cargo build. A server or desktop deployment that converts formal
-ZVVNMOD shapes must install the reviewed backend explicitly:
+The conversion is performed in process by the pure-Rust `zvvnmod-utn57` crate and its pinned
+`mongol-norm` normalizer. No Python, subprocess, installer, filesystem, or network access is
+involved, so the same code path runs on servers, desktops, mobile, and WebAssembly.
 
-```sh
-cargo install zvvnmod-utn57 --version 0.1.0-alpha.3 --locked
-zvvnmod-install-mongol-norm
-```
+A failing conversion returns `MecoError::Utn57(reason)`. Reverse conversion from UTN #57 remains
+unsupported and returns `MecoError::Unsupported(CodeType::Utn57)`. Identity and blank-input
+conversions keep the normal short-circuit behavior.
 
-Without the feature, a non-identity conversion targeting `CodeType::Utn57` returns
-`MecoError::Unsupported(CodeType::Utn57)`. With the feature enabled, an unavailable or failing
-backend returns `MecoError::Utn57(reason)`. Reverse conversion from UTN #57 remains unsupported.
-Identity and blank-input conversions retain the normal short-circuit behavior and do not start the
-backend.
+The `utn57-command` feature from 0.2.x is kept as a deprecated no-op so existing
+`--features utn57-command` commands still build; it no longer changes anything.
 
-The optional conversion path is:
+The conversion path is:
 
 ```text
 source encoding
 → meco-core ZVVNMOD hub
-→ zvvnmod-utn57 0.1.0-alpha.3
-→ explicitly installed mongol-norm command
+→ zvvnmod-utn57 0.1.0-alpha.4 positioned written units
+→ mongol-norm 0.0.4 (linked in)
 → canonical Unicode
 ```
 
