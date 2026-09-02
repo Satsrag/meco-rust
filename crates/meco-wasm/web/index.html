@@ -11,7 +11,6 @@
     @font-face { font-family:"menk shape";  src:url("fonts/menk_shape.ttf")   format("truetype"); }
     @font-face { font-family:"zvvn mod";    src:url("fonts/ZvvnMod.ttf")      format("truetype"); }
     @font-face { font-family:"z52";         src:url("fonts/z52.otf")          format("opentype"); }
-    @font-face { font-family:"monaco";      src:url("fonts/monaco.ttf")       format("truetype"); }
 
     :root { --bd:#dcd8cd; --mut:#8a8577; --acc:#2d7d6f; --hub:#b8860b; --bg:#faf9f6; }
     * { box-sizing:border-box; }
@@ -34,11 +33,14 @@
             font-size:30px; line-height:1.5; overflow:auto; white-space:pre-wrap; resize:vertical; }
     .pane.hub .mong { border-color:var(--hub); background:#fffdf5; }
     .arrow { align-self:center; color:var(--mut); font-size:22px; padding-top:120px; }
-    .hex { font-family:"monaco",ui-monospace,Menlo,monospace; font-size:11px; line-height:1.6;
+    .hex { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; line-height:1.6;
            color:#555; background:#f3f1ea; border:1px solid var(--bd); border-radius:8px;
            padding:6px 8px; margin-top:6px; white-space:pre-wrap; word-break:break-all; min-height:26px; }
     .tag { color:var(--acc); font-weight:700; }
     .err { color:#c0392b; }
+    footer { margin-top:14px; font-size:12px; color:var(--mut); }
+    footer a { color:var(--acc); text-decoration:none; }
+    footer a:hover { text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -72,6 +74,8 @@
             <div class="hex" id="hexR"></div>
         </div>
     </div>
+
+    <footer><a href="../">← 其他工具 / other tools</a> · <a href="https://github.com/Satsrag/meco-rust">Satsrag/meco-rust</a></footer>
 
 <script type="module">
 import init, { translate, version } from "./pkg/meco_wasm.js";
