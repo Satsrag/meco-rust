@@ -109,9 +109,14 @@
     #report label { display:block; font-size:12px; color:var(--mut); margin-bottom:4px; }
     #reportWhat { width:100%; font:inherit; font-size:13px; padding:6px 8px; margin-bottom:12px;
                   border:1px solid var(--bd); border-radius:6px; background:#fff; resize:vertical; }
-    .shot { margin-bottom:12px; font-size:12px; color:var(--mut); line-height:1.6; }
+    .shot { margin-bottom:12px; font-size:12px; color:var(--mut); line-height:1.6;
+            border:1px dashed var(--bd); border-radius:9px; padding:10px 12px; background:#fbfaf7; }
     .shot button { font:inherit; font-size:12px; padding:3px 9px; margin-right:6px; cursor:pointer;
                    border:1px solid var(--bd); border-radius:6px; background:#fff; }
+    /* The capture is the one thing here worth doing, so it does not look like its own siblings. */
+    .shot #shotGrab { font-size:13px; font-weight:600; padding:6px 14px;
+                      color:#fff; background:var(--acc); border-color:var(--acc); }
+    .shot #shotGrab:hover { filter:brightness(1.12); }
     .shot #shotNote { display:block; margin-top:6px; }
     #shotPreview { display:block; max-width:100%; max-height:22vh; margin-top:8px;
                    border:1px solid var(--bd); border-radius:8px; }
@@ -186,7 +191,7 @@
             <label for="reportWhat">What went wrong? Optional — you can also write it on GitHub. / 出了什么问题？可留空。</label>
             <textarea id="reportWhat" rows="2" placeholder="e.g. ᠰᠠᠶᠢᠨ to utn57, the final letter should be ᠨ / 例：尾字母应该是 ᠨ"></textarea>
             <div class="shot">
-                <button type="button" id="shotGrab">Add a screenshot / 加一张截图</button>
+                <button type="button" id="shotGrab">📷 Add a screenshot / 加一张截图</button>
                 <button type="button" id="shotDrop" hidden>Remove / 移除</button>
                 <button type="button" id="shotSave" hidden>Download PNG / 下载 PNG</button>
                 <span id="shotNote">A GitHub link cannot carry an image, so the screenshot goes to your clipboard — paste it into the issue. / GitHub 的链接塞不进图片，所以截图放进剪贴板，你在 issue 里粘贴即可。</span>
@@ -521,7 +526,7 @@ function showShot(blob){
     shot = blob;
     $("shotPreview").hidden = !blob;
     $("shotDrop").hidden = $("shotSave").hidden = !blob;
-    $("shotGrab").textContent = blob ? "Retake / 重新截图" : "Add a screenshot / 加一张截图";
+    $("shotGrab").textContent = blob ? "📷 Retake / 重新截图" : "📷 Add a screenshot / 加一张截图";
     if(blob) $("shotPreview").src = URL.createObjectURL(blob);
 }
 async function shotToClipboard(){
@@ -586,7 +591,7 @@ function wire(){
     $("shotGrab").onclick = async ()=>{
         $("shotGrab").disabled = true;
         const was = $("shotGrab").textContent;
-        $("shotGrab").textContent = "pick the tab to capture… / 选择标签页…";
+        $("shotGrab").textContent = "pick the tab to capture… / 选择要截的标签页…";
         try{ showShot(await grabShot()); $("shotNote").textContent =
                 "It goes to your clipboard when you press Open on GitHub — paste it into the issue's "
                 + "Screenshot field. / 点「在 GitHub 打开」时放进剪贴板，到 issue 的截图栏粘贴。"; }
