@@ -29,6 +29,35 @@ fn translates_positional_text_without_adding_a_newline() {
 }
 
 #[test]
+fn converts_to_utn57_without_any_external_backend() {
+    let output = meco()
+        .args(["translate", "--from", "zvvnmod", "--to", "utn57", "\u{E0E5}"])
+        .env_clear()
+        .output()
+        .expect("meco command should run");
+
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(output.stdout, "\u{180A}".as_bytes());
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn rejects_utn57_as_a_source() {
+    let output = meco()
+        .args(["translate", "--from", "utn57", "--to", "z52", "\u{1820}"])
+        .output()
+        .expect("meco command should run");
+
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("conversion not supported for Utn57"));
+}
+
+#[test]
 fn reads_input_from_stdin_when_text_is_omitted() {
     let mut child = meco()
         .args(["translate", "--from", "z52", "--to", "menk_shape"])

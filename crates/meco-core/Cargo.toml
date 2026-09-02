@@ -1,6 +1,6 @@
 [package]
 name = "meco-core"
-version = "0.2.1"
+version = "0.3.0"
 edition.workspace = true
 license.workspace = true
 rust-version = "1.82"
@@ -19,7 +19,10 @@ path = "src/bin/meco.rs"
 
 [features]
 default = []
-utn57-command = ["dep:zvvnmod-utn57"]
+# Deprecated no-op kept so existing `--features utn57-command` builds keep working. UTN #57
+# output is always available since 0.3.0: the backend is pure Rust and linked into the core.
+utn57-command = []
 
 [dependencies]
-zvvnmod-utn57 = { version = "=0.1.0-alpha.3", optional = true }
+# Pure-Rust ZVVNMOD → UTN #57 conversion (no subprocess, no Python, wasm32 compatible).
+zvvnmod-utn57 = "=0.1.0-alpha.4"

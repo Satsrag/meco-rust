@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 /* Translate UTF-8 `input` from encoding `from` to `to`. `from`/`to` are canonical encoding names:
- * "zvvnmod", "delehi", "menk_shape", "menk_letter", "z52".
+ * "zvvnmod", "delehi", "menk_shape", "menk_letter", "z52", plus the output-only "utn57".
  * Returns a newly allocated UTF-8 C string the caller must release with meco_free(), or NULL on
  * error (NULL arg, invalid UTF-8, unknown encoding, unsupported conversion). */
 char *meco_translate(const char *from, const char *to, const char *input);

@@ -4,8 +4,8 @@
 //! Note (design decision #3): a content-level *unmappable code point* is **not** an error here —
 //! it is passed through unchanged. So [`MecoError::NotFoundInMapper`] is reserved for internal/
 //! diagnostic use. The default build's public `translate` returns `Err` only for structural problems
-//! (unsupported encoding, unsupported series, unknown enum string). With `utn57-command`, backend
-//! failures are also returned through this same error channel.
+//! (unsupported encoding, unsupported series, unknown enum string) and for UTN #57 conversion
+//! failures reported by the in-process `zvvnmod-utn57` backend.
 
 use crate::code_type::CodeType;
 use std::fmt;
@@ -24,7 +24,7 @@ pub enum MecoError {
     UnsupportedEnumType(String),
     /// Conversion involving this code is not supported in the active build.
     Unsupported(CodeType),
-    /// The optional command-backed UTN #57 target conversion failed.
+    /// The in-process UTN #57 target conversion (`zvvnmod-utn57` + `mongol-norm`) failed.
     Utn57(String),
 }
 

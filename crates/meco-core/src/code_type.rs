@@ -19,7 +19,7 @@ pub enum CodeSeries {
 /// `Zvvnmod` is the intermediate hub. Port of `CodeType.java` lines 14-20.
 ///
 /// `Oyun` and `Utn57` are parseable. `Oyun` and UTN #57 as a source remain unsupported; UTN #57
-/// is available as a target when `meco-core` is built with the `utn57-command` feature.
+/// is always available as an output target.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum CodeType {
     Zvvnmod,

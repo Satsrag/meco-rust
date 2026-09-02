@@ -9,7 +9,7 @@ The `meco-core` crate provides both:
 - a Rust library API;
 - the `meco` command for desktop and server use.
 
-Canonical UTN #57 Unicode output is available as an optional desktop/server feature. The Web, mobile, and prebuilt C packages remain pure Rust and do not start external commands.
+Canonical UTN #57 Unicode output is built in on every platform. The conversion is pure Rust and runs in process, so the CLI, the Rust library, and the Web, mobile, and prebuilt C packages all provide it without an external command, interpreter, or installer.
 
 ## Supported encodings
 
@@ -20,7 +20,7 @@ Canonical UTN #57 Unicode output is available as an optional desktop/server feat
 | `menk_shape` | Menk positional shape encoding | Yes | Yes |
 | `menk_letter` | Menk letter convention | Yes | Yes |
 | `z52` | Z52/zcode positional encoding | Yes | Yes |
-| `utn57` | Unicode output following the reviewed UTN #57 mapping | No | Optional |
+| `utn57` | Unicode output following the reviewed UTN #57 mapping | No | Yes |
 | `oyun` | Reserved by the original API | No | No |
 
 MenkLetter and Delehi use many of the same Unicode code points, but they apply different contextual rules. `meco` does not guess the source encoding. Choose `--from` from the application, input method, font system, or database column that produced the text.
@@ -36,10 +36,10 @@ Install Rust with [rustup](https://rustup.rs/) if `cargo --version` is unavailab
 
 ### Standard CLI
 
-Install the published `meco-core 0.2.1` crate:
+Install the published `meco-core 0.3.0` crate:
 
 ```sh
-cargo install meco-core --version 0.2.1 --locked
+cargo install meco-core --version 0.3.0 --locked
 ```
 
 Check the installation:
@@ -52,7 +52,7 @@ meco --help
 Expected version:
 
 ```text
-meco 0.2.1
+meco 0.3.0
 ```
 
 ### Convert text from an argument
@@ -87,38 +87,9 @@ meco translate --from z52 --to delehi 'text'; echo
 
 On zsh, a `%` displayed immediately after the result is the shell's end-of-line marker. It is not part of the converted text.
 
-## Install UTN #57 output
+## Convert to UTN #57
 
-UTN #57 output uses a reviewed ZVVNMOD-to-positioned-written-unit mapping and the pinned `mongol-norm 0.0.4` normalization backend. This path is intended for desktop and server deployments.
-
-### 1. Install `meco` with the feature enabled
-
-```sh
-cargo install meco-core \
-  --version 0.2.1 \
-  --features utn57-command \
-  --locked
-```
-
-You can run this command over an existing standard installation. Cargo will replace the `meco` executable with the feature-enabled build.
-
-### 2. Install the backend helper
-
-```sh
-cargo install zvvnmod-utn57 \
-  --version 0.1.0-alpha.3 \
-  --locked
-```
-
-### 3. Install the pinned Python backend
-
-```sh
-zvvnmod-install-mongol-norm
-```
-
-The installer creates a user-local, hash-locked installation of `mongol-norm 0.0.4`. It does not require root access and does not modify the system Python environment.
-
-### 4. Convert to UTN #57
+UTN #57 output uses the reviewed ZVVNMOD-to-positioned-written-unit mapping from `zvvnmod-utn57 0.1.0-alpha.4` and the pinned pure-Rust `mongol-norm 0.0.4` normalizer. Both are compiled into `meco`; nothing else has to be installed.
 
 ```sh
 meco translate --from z52 --to utn57 'ᡳᡬᡦ ᢌᡭᡪᢊᡱᡱᡭᢐ ᢋᡭᡬᢎᡭᡧ'; echo
@@ -143,20 +114,11 @@ Reverse conversion from UTN #57 is not implemented:
 
 #### `conversion not supported for Utn57`
 
-The installed `meco` was built without the optional feature. Reinstall it with:
+`utn57` was passed as `--from`. Reverse conversion is not implemented; UTN #57 is an output target only. If an older `meco` reports this for `--to utn57`, upgrade to 0.3.0 or newer, where UTN #57 output no longer needs the `utn57-command` feature or an external backend.
 
-```sh
-cargo install meco-core --version 0.2.1 --features utn57-command --locked
-```
+#### `UTN #57 conversion failed: ...`
 
-#### `FileNotFoundError: .../.local/share/zvvnmod-utn57`
-
-The Rust feature is present, but the normalization backend has not been installed. Run:
-
-```sh
-cargo install zvvnmod-utn57 --version 0.1.0-alpha.3 --locked
-zvvnmod-install-mongol-norm
-```
+The in-process backend rejected the ZVVNMOD hub text. Check that `--from` names the encoding the text was actually produced in, and report the input together with the message if the source is correct.
 
 #### The output contains FVS, MVS, or ZWJ
 
@@ -171,14 +133,14 @@ They are different source conventions even though both use Unicode Mongolian let
 Add the default, pure Rust library:
 
 ```sh
-cargo add meco-core@0.2.1
+cargo add meco-core@0.3.0
 ```
 
 Or add it to `Cargo.toml`:
 
 ```toml
 [dependencies]
-meco-core = "0.2.1"
+meco-core = "0.3.0"
 ```
 
 Convert text:
@@ -194,14 +156,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The default library has no external runtime or command dependency.
+The library has no external runtime or command dependency and builds for `wasm32-unknown-unknown`.
 
-### Rust library with UTN #57 output
-
-```toml
-[dependencies]
-meco-core = { version = "0.2.1", features = ["utn57-command"] }
-```
+### UTN #57 output from the Rust library
 
 ```rust
 use meco_core::{translate, CodeType};
@@ -209,11 +166,11 @@ use meco_core::{translate, CodeType};
 let output = translate(CodeType::MenkLetter, CodeType::Utn57, input)?;
 ```
 
-The feature-enabled library uses the same external backend as the CLI. Install it once with `zvvnmod-install-mongol-norm` on every machine that performs UTN #57 conversion.
+No Cargo feature is required. The `utn57-command` feature name is still accepted as a deprecated no-op so existing build commands keep working.
 
 ## Prebuilt release packages
 
-Download packages from the [v0.2.1 release](https://github.com/Satsrag/meco-rust/releases/tag/v0.2.1).
+Download packages from the [v0.3.0 release](https://github.com/Satsrag/meco-rust/releases/tag/v0.3.0).
 
 | Platform | Release asset |
 |---|---|
@@ -225,14 +182,14 @@ Download packages from the [v0.2.1 release](https://github.com/Satsrag/meco-rust
 | iOS Swift | `MecoSwift.xcframework.zip` |
 | Apple C ABI | `MecoC.xcframework.zip` |
 | Android | `meco-android-release.aar` |
-| Browser/WebAssembly | `meco-wasm-web-0.2.1.tgz` |
-| Node.js/WebAssembly | `meco-wasm-nodejs-0.2.1.tgz` |
+| Browser/WebAssembly | `meco-wasm-web-0.3.0.tgz` |
+| Node.js/WebAssembly | `meco-wasm-nodejs-0.3.0.tgz` |
 
 The C archives include the header and static/dynamic libraries for the target. Go, Python, PHP, Java, Dart, and other runtimes can load the C ABI. Swift, Android, browser, and Node.js have dedicated packages.
 
 See [USAGE.md](USAGE.md) for C, C++, Go, Python, Dart, Java, Android, Swift, Objective-C, browser, Node.js, and PHP examples.
 
-The prebuilt packages do not include the command-backed UTN #57 feature. Portable conversions among ZVVNMOD, Delehi, MenkShape, MenkLetter, and Z52 work in those packages.
+Every prebuilt package includes UTN #57 output alongside the portable conversions among ZVVNMOD, Delehi, MenkShape, MenkLetter, and Z52.
 
 ## Conversion model
 
@@ -246,14 +203,14 @@ source encoding
 → target text
 ```
 
-UTN #57 output adds two reviewed stages:
+UTN #57 output adds two reviewed stages, both linked into the same binary:
 
 ```text
 source encoding
 → meco-core
 → ZVVNMOD positioned shapes
-→ zvvnmod-utn57 positioned written units
-→ mongol-norm 0.0.4
+→ zvvnmod-utn57 0.1.0-alpha.4 positioned written units
+→ mongol-norm 0.0.4 (pure Rust, in process)
 → Unicode letters and format controls
 ```
 
@@ -287,12 +244,6 @@ Build the CLI:
 
 ```sh
 cargo build -p meco-core --bin meco --release --locked
-```
-
-Build the feature-enabled CLI:
-
-```sh
-cargo build -p meco-core --bin meco --release --features utn57-command --locked
 ```
 
 The portable conversion matrix is checked against the original Java meco implementation on 11,492 golden rows.

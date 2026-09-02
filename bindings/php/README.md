@@ -22,7 +22,8 @@ echo Meco::translate(Meco::DELEHI, Meco::ZVVNMOD, $unicodeInput);
 echo Meco::version();
 ```
 
-Encodings: `Meco::ZVVNMOD`, `Meco::DELEHI`, `Meco::MENK_SHAPE`, `Meco::MENK_LETTER`, `Meco::Z52`.
+Encodings: `Meco::ZVVNMOD`, `Meco::DELEHI`, `Meco::MENK_SHAPE`, `Meco::MENK_LETTER`, `Meco::Z52`,
+and the output-only `Meco::UTN57` (canonical UTN #57 Unicode; valid as `$to` only).
 `translate()` throws `RuntimeException` on an unknown encoding or unsupported conversion.
 
 ## The native library

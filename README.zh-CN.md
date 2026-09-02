@@ -9,7 +9,7 @@
 - Rust library API；
 - 适用于桌面和服务器的 `meco` 命令。
 
-UTN #57 Unicode 输出是可选功能，目前适用于桌面和服务器。Web、移动端和预编译 C 包保持纯 Rust，不会启动外部命令。
+UTN #57 Unicode 输出已经内置到所有平台。转换逻辑是纯 Rust、在进程内完成，因此 CLI、Rust library、Web、移动端和预编译 C 包都直接支持，不需要外部命令、解释器或安装器。
 
 ## 支持的编码
 
@@ -20,7 +20,7 @@ UTN #57 Unicode 输出是可选功能，目前适用于桌面和服务器。Web�
 | `menk_shape` | Menk 位置字形编码 | 是 | 是 |
 | `menk_letter` | Menk 字母约定 | 是 | 是 |
 | `z52` | Z52/zcode 位置字形编码 | 是 | 是 |
-| `utn57` | 按 reviewed UTN #57 mapping 生成的 Unicode 输出 | 否 | 可选功能 |
+| `utn57` | 按 reviewed UTN #57 mapping 生成的 Unicode 输出 | 否 | 是 |
 | `oyun` | 原始 API 保留的类型 | 否 | 否 |
 
 MenkLetter 和 Delehi 使用很多相同的 Unicode 码位，但上下文解释规则不同。`meco` 不会自动猜测源编码。应根据产生文本的应用、输入法、字体系统或数据库字段选择 `--from`。
@@ -36,10 +36,10 @@ MenkLetter 和 Delehi 使用很多相同的 Unicode 码位，但上下文解释�
 
 ### 安装普通 CLI
 
-从 crates.io 安装已经发布的 `meco-core 0.2.1`：
+从 crates.io 安装已经发布的 `meco-core 0.3.0`：
 
 ```sh
-cargo install meco-core --version 0.2.1 --locked
+cargo install meco-core --version 0.3.0 --locked
 ```
 
 检查安装结果：
@@ -52,7 +52,7 @@ meco --help
 正确的版本输出是：
 
 ```text
-meco 0.2.1
+meco 0.3.0
 ```
 
 ### 直接转换一段文本
@@ -87,38 +87,9 @@ meco translate --from z52 --to delehi 'text'; echo
 
 macOS 默认 zsh 有时会在结果末尾显示 `%`。这是 zsh 的“上一条输出没有换行”标记，不属于转换结果。
 
-## 安装 UTN #57 输出功能
+## 转换到 UTN #57
 
-UTN #57 路径使用 reviewed ZVVNMOD → positioned written unit mapping，并调用固定版本的 `mongol-norm 0.0.4`。这套功能目前面向桌面和服务器。
-
-### 第一步：安装启用 feature 的 `meco`
-
-```sh
-cargo install meco-core \
-  --version 0.2.1 \
-  --features utn57-command \
-  --locked
-```
-
-如果已经安装过普通版，也可以直接运行这条命令。Cargo 会用启用 UTN57 功能的构建替换原来的 `meco` executable。
-
-### 第二步：安装 backend helper
-
-```sh
-cargo install zvvnmod-utn57 \
-  --version 0.1.0-alpha.3 \
-  --locked
-```
-
-### 第三步：安装固定版本的 Python backend
-
-```sh
-zvvnmod-install-mongol-norm
-```
-
-安装器会在当前用户目录中建立经过 hash 校验的 `mongol-norm 0.0.4` 独立安装。它不需要 root 权限，也不会修改系统 Python 环境。
-
-### 第四步：转换到 UTN #57
+UTN #57 路径使用 `zvvnmod-utn57 0.1.0-alpha.4` 中 reviewed 的 ZVVNMOD → positioned written unit mapping，以及固定版本的纯 Rust 归一化库 `mongol-norm 0.0.4`。两者都已编译进 `meco`，不需要额外安装任何东西。
 
 ```sh
 meco translate --from z52 --to utn57 'ᡳᡬᡦ ᢌᡭᡪᢊᡱᡱᡭᢐ ᢋᡭᡬᢎᡭᡧ'; echo
@@ -143,20 +114,11 @@ meco translate --from zvvnmod --to utn57 '...'
 
 #### `conversion not supported for Utn57`
 
-当前安装的 `meco` 没有启用可选 feature。重新安装：
+把 `utn57` 用在了 `--from`。目前没有实现反向转换，UTN #57 只能作为输出目标。如果是旧版 `meco` 在 `--to utn57` 时报这个错误，请升级到 0.3.0 或更新版本；新版本的 UTN #57 输出不再需要 `utn57-command` feature 和外部 backend。
 
-```sh
-cargo install meco-core --version 0.2.1 --features utn57-command --locked
-```
+#### `UTN #57 conversion failed: ...`
 
-#### `FileNotFoundError: .../.local/share/zvvnmod-utn57`
-
-Rust feature 已经启用，但 normalization backend 尚未安装。执行：
-
-```sh
-cargo install zvvnmod-utn57 --version 0.1.0-alpha.3 --locked
-zvvnmod-install-mongol-norm
-```
+进程内的 backend 拒绝了 ZVVNMOD 中间文本。先确认 `--from` 是文本真实的源编码；如果源编码无误，请把输入和错误信息一起反馈。
 
 #### 输出中出现 FVS、MVS 或 ZWJ
 
@@ -171,14 +133,14 @@ zvvnmod-install-mongol-norm
 添加默认的纯 Rust library：
 
 ```sh
-cargo add meco-core@0.2.1
+cargo add meco-core@0.3.0
 ```
 
 也可以直接修改 `Cargo.toml`：
 
 ```toml
 [dependencies]
-meco-core = "0.2.1"
+meco-core = "0.3.0"
 ```
 
 调用转换 API：
@@ -194,14 +156,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-默认 library 不依赖外部 runtime，也不会启动外部命令。
+library 不依赖外部 runtime，也不会启动外部命令，并且可以编译到 `wasm32-unknown-unknown`。
 
-### Rust library 启用 UTN #57
-
-```toml
-[dependencies]
-meco-core = { version = "0.2.1", features = ["utn57-command"] }
-```
+### 在 Rust library 中输出 UTN #57
 
 ```rust
 use meco_core::{translate, CodeType};
@@ -209,11 +166,11 @@ use meco_core::{translate, CodeType};
 let output = translate(CodeType::MenkLetter, CodeType::Utn57, input)?;
 ```
 
-启用 feature 后，library 与 CLI 使用同一个外部 backend。每台执行 UTN #57 转换的机器都需要运行一次 `zvvnmod-install-mongol-norm`。
+不需要任何 Cargo feature。`utn57-command` 这个 feature 名仍然保留为已废弃的空操作，以便旧的构建命令继续可用。
 
 ## 预编译 Release 包
 
-从 [v0.2.1 Release](https://github.com/Satsrag/meco-rust/releases/tag/v0.2.1) 下载。
+从 [v0.3.0 Release](https://github.com/Satsrag/meco-rust/releases/tag/v0.3.0) 下载。
 
 | 平台 | Release asset |
 |---|---|
@@ -225,14 +182,14 @@ let output = translate(CodeType::MenkLetter, CodeType::Utn57, input)?;
 | iOS Swift | `MecoSwift.xcframework.zip` |
 | Apple C ABI | `MecoC.xcframework.zip` |
 | Android | `meco-android-release.aar` |
-| 浏览器/WebAssembly | `meco-wasm-web-0.2.1.tgz` |
-| Node.js/WebAssembly | `meco-wasm-nodejs-0.2.1.tgz` |
+| 浏览器/WebAssembly | `meco-wasm-web-0.3.0.tgz` |
+| Node.js/WebAssembly | `meco-wasm-nodejs-0.3.0.tgz` |
 
 C 压缩包包含对应平台的 header、静态库和动态库。Go、Python、PHP、Java、Dart 等运行时可以加载 C ABI。Swift、Android、浏览器和 Node.js 使用各自的专用包。
 
 C、C++、Go、Python、Dart、Java、Android、Swift、Objective-C、浏览器、Node.js 和 PHP 的示例见 [USAGE.md](USAGE.md)。
 
-预编译包不包含 command-backed UTN #57 feature。ZVVNMOD、Delehi、MenkShape、MenkLetter 和 Z52 之间的普通转换可以在这些包中使用。
+所有预编译包都包含 UTN #57 输出，以及 ZVVNMOD、Delehi、MenkShape、MenkLetter 和 Z52 之间的普通转换。
 
 ## 转换模型
 
@@ -246,14 +203,14 @@ C、C++、Go、Python、Dart、Java、Android、Swift、Objective-C、浏览器�
 → 目标文本
 ```
 
-UTN #57 输出增加两个 reviewed 阶段：
+UTN #57 输出增加两个 reviewed 阶段，都链接在同一个二进制里：
 
 ```text
 源编码
 → meco-core
 → ZVVNMOD positioned shapes
-→ zvvnmod-utn57 positioned written units
-→ mongol-norm 0.0.4
+→ zvvnmod-utn57 0.1.0-alpha.4 positioned written units
+→ mongol-norm 0.0.4（纯 Rust，进程内）
 → Unicode 字母和格式控制符
 ```
 
@@ -283,16 +240,10 @@ cd meco-rust
 cargo test --workspace --locked
 ```
 
-构建普通 CLI：
+构建 CLI：
 
 ```sh
 cargo build -p meco-core --bin meco --release --locked
-```
-
-构建启用 UTN57 的 CLI：
-
-```sh
-cargo build -p meco-core --bin meco --release --features utn57-command --locked
 ```
 
 普通转换矩阵已通过 11,492 行 golden corpus 与原始 Java meco 实现逐字节比较。

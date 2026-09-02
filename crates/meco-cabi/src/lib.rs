@@ -12,7 +12,7 @@ use std::str::FromStr;
 
 /// Translate `input` from encoding `from` to `to`. All three are NUL-terminated UTF-8 C strings;
 /// `from`/`to` are canonical encoding names ("zvvnmod", "delehi", "menk_shape", "menk_letter",
-/// "z52"; PHP-style "menkshape" aliases are also accepted).
+/// "z52", plus the output-only "utn57"; PHP-style "menkshape" aliases are also accepted).
 ///
 /// Returns a newly allocated UTF-8 C string (free it with [`meco_free`]), or NULL on error:
 /// a NULL argument, invalid UTF-8, an unknown encoding name, or an unsupported conversion.
