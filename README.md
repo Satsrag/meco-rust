@@ -11,6 +11,19 @@ The `meco-core` crate provides both:
 
 Canonical UTN #57 Unicode output is built in on every platform. The conversion is pure Rust and runs in process, so the CLI, the Rust library, and the Web, mobile, and prebuilt C packages all provide it without an external command, interpreter, or installer.
 
+## Try it in the browser
+
+**<https://www.satsrag.dev/convert/>** — the same Rust core compiled to WebAssembly, running
+entirely in your browser; nothing is uploaded.
+
+Type on the left, pick a target encoding on the right, and the ZVVNMOD hub in the middle shows what
+the conversion actually pivots through — which is usually what tells you which half of a bad
+conversion is at fault. Every code point is listed under its pane, and characters that do not belong
+to the pane's encoding are marked red, so choosing the wrong `--from` is visible rather than silent.
+A report button files an issue in this repository with the sequences already filled in.
+
+The page is built from `crates/meco-wasm/web` with its `build.sh`.
+
 ## Supported encodings
 
 | CLI name | Description | Portable source | Portable target |
