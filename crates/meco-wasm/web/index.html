@@ -5,39 +5,104 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>meco · WASM 三栏转换 (Zvvnmod 枢纽)</title>
 <style>
-    /* per-encoding fonts (copied from meco static/fonts) */
+    /* per-encoding fonts (copied from meco static/fonts; utn57 = Noto Sans Mongolian 3.002) */
     @font-face { font-family:"delehi";      src:url("fonts/delehi.ttf")       format("truetype"); }
     @font-face { font-family:"menk letter"; src:url("fonts/menk_letter.ttf")  format("truetype"); }
     @font-face { font-family:"menk shape";  src:url("fonts/menk_shape.ttf")   format("truetype"); }
     @font-face { font-family:"zvvn mod";    src:url("fonts/ZvvnMod.ttf")      format("truetype"); }
     @font-face { font-family:"z52";         src:url("fonts/z52.otf")          format("opentype"); }
+    @font-face { font-family:"utn57";        src:url("fonts/utn57.ttf")        format("truetype"); }
 
     :root { --bd:#dcd8cd; --mut:#8a8577; --acc:#2d7d6f; --hub:#b8860b; --bg:#faf9f6; }
     * { box-sizing:border-box; }
-    body { margin:0; background:var(--bg); color:#222; padding:16px 20px;
+    /* The whole page is one column that fills the viewport; the panes take whatever the header,
+       intro and footer leave, and inside each pane the box gets the lion's share of it. */
+    html { height:100%; }
+    body { height:100%; margin:0; display:flex; flex-direction:column;
+           background:var(--bg); color:#222; padding:16px 20px;
            font-family:system-ui,-apple-system,"PingFang SC",sans-serif; }
+    h1, .sub, footer { flex:0 0 auto; }
     h1 { font-size:17px; margin:0 0 4px; }
-    .sub { font-size:12px; color:var(--mut); margin-bottom:12px; }
+    .sub { font-size:12px; color:var(--mut); margin-bottom:10px; }
     #status { font-weight:700; }
-    .samples { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
-    .samples button { font-size:12px; padding:3px 8px; border:1px solid var(--bd); border-radius:6px; background:#fff; cursor:pointer; }
 
-    .panes { display:flex; gap:14px; align-items:flex-start; }
-    .pane { flex:1 1 0; min-width:240px; }
+    /* One grid for all three panes, so the caption / box / code-point rows line up across them no
+       matter how much each row's content needs. `.pane` is display:contents, which keeps its
+       classes available to the descendant selectors below while letting its children be grid items. */
+    .panes { flex:1 1 auto; min-height:0; display:grid;
+             grid-template-columns: minmax(240px,1fr) auto minmax(240px,1fr) auto minmax(240px,1fr);
+             grid-template-rows: auto minmax(0,1fr) fit-content(30%);
+             row-gap:6px; column-gap:14px; align-items:stretch; }
+    .pane { display:contents; }
+    #paneL > * { grid-column:1; }
+    #paneM > * { grid-column:3; }
+    #paneR > * { grid-column:5; }
+    .pane .cap { grid-row:1; }
+    .pane .mongwrap { grid-row:2; }
+    .pane .hex { grid-row:3; }
+    #arrow1 { grid-column:2; }
+    #arrow2 { grid-column:4; }
     .pane .cap { display:flex; justify-content:space-between; align-items:center; gap:8px;
-                 font-size:13px; color:var(--mut); margin-bottom:6px; }
-    .pane .cap select { font-size:13px; padding:4px 8px; border:1px solid var(--bd); border-radius:6px; background:#fff; }
+                 font-size:13px; color:var(--mut); }
+    .pane .cap select { min-width:0; max-width:100%; font-size:13px; padding:4px 8px;
+                        border:1px solid var(--bd); border-radius:6px; background:#fff; }
     .pane.hub .cap { color:var(--hub); font-weight:700; }
-    .mong { writing-mode:vertical-lr; text-orientation:sideways; height:300px; width:100%;
-            padding:12px; border:1px solid var(--bd); border-radius:9px; background:#fff;
-            font-size:30px; line-height:1.5; overflow:auto; white-space:pre-wrap; resize:vertical; }
-    .pane.hub .mong { border-color:var(--hub); background:#fffdf5; }
-    .arrow { align-self:center; color:var(--mut); font-size:22px; padding-top:120px; }
-    .hex { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; line-height:1.6;
+    /* A textarea cannot colour individual characters, so each box is a transparent textarea over a
+       backdrop that paints the same text with the same metrics. Both inherit the pane's font. */
+    .mongwrap { min-height:0; position:relative; overflow:hidden;
+                border:1px solid var(--bd); border-radius:9px; background:#fff; }
+    .pane.hub .mongwrap { border-color:var(--hub); background:#fffdf5; }
+    .pane.ro .mongwrap { background:#f6f5f1; }
+    .mong { writing-mode:vertical-lr; text-orientation:sideways; height:100%; width:100%;
+            margin:0; padding:12px; border:0; background:transparent;
+            font-family:inherit; font-size:30px; line-height:1.5; white-space:pre-wrap; }
+    textarea.mong { position:relative; z-index:1; display:block; overflow:auto; resize:none;
+                    color:transparent; caret-color:#222; }
+    .bd { position:absolute; inset:0; z-index:0; color:#222; overflow:hidden; pointer-events:none; }
+    .bd .bad { color:#c0392b; }
+    textarea.mong::placeholder { color:#b6b1a5; }
+    .ro-badge { font-size:11px; color:var(--acc); border:1px solid var(--acc); border-radius:5px; padding:0 4px; }
+    .arrow { grid-row:1 / -1; align-self:center; color:var(--mut); font-size:22px; }
+    .hex { min-height:30px; overflow:auto;
+           font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; line-height:1.6;
            color:#555; background:#f3f1ea; border:1px solid var(--bd); border-radius:8px;
-           padding:6px 8px; margin-top:6px; white-space:pre-wrap; word-break:break-all; min-height:26px; }
+           padding:6px 8px; white-space:pre-wrap; word-break:break-all; }
     .tag { color:var(--acc); font-weight:700; }
+    .cu { padding:1px 2px; border-radius:3px; }
+    .cu.sel { background:var(--acc); color:#fff; }
+    .cu.sel .tag { color:#b7e4d6; }
+    .cu.bad { color:#c0392b; }
+    .cu.sel.bad { background:#c0392b; color:#fff; }
+    .cu.sel.bad .tag { color:#f6d0cb; }
     .err { color:#c0392b; }
+    .linkbtn { font:inherit; color:var(--acc); background:none; border:0; padding:0; cursor:pointer;
+               text-decoration:underline; }
+    /* Error toast: fixed, so raising it never reflows the three-pane grid. */
+    #alert { position:fixed; right:20px; bottom:16px; z-index:20; max-width:min(520px,calc(100vw - 40px));
+             display:flex; gap:10px; align-items:flex-start;
+             font-size:12px; line-height:1.5; color:#7d2b20; background:#fdf1ef;
+             border:1px solid #e5b3aa; border-radius:9px; padding:10px 12px;
+             box-shadow:0 6px 20px rgb(60 20 10 / .12); }
+    #alert button { flex:0 0 auto; font:inherit; font-size:12px; padding:2px 8px; cursor:pointer;
+                    color:#7d2b20; background:#fff; border:1px solid #d99a90; border-radius:6px; }
+    #alert span { flex:1 1 auto; min-width:0; word-break:break-word; }
+    #report { width:min(760px,92vw); border:1px solid var(--bd); border-radius:12px; padding:0;
+              color:#222; background:var(--bg); }
+    #report::backdrop { background:rgb(20 18 12 / .38); }
+    #report .rp { padding:16px 18px; }
+    #report h2 { margin:0 0 6px; font-size:15px; }
+    #report p { margin:0 0 12px; font-size:12px; line-height:1.6; color:var(--mut); }
+    #report label { display:block; font-size:12px; color:var(--mut); margin-bottom:4px; }
+    #reportWhat { width:100%; font:inherit; font-size:13px; padding:6px 8px; margin-bottom:12px;
+                  border:1px solid var(--bd); border-radius:6px; background:#fff; resize:vertical; }
+    #reportBody { max-height:38vh; overflow:auto; margin:0 0 14px;
+                  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; line-height:1.6;
+                  color:#555; background:#f3f1ea; border:1px solid var(--bd); border-radius:8px;
+                  padding:8px 10px; white-space:pre-wrap; word-break:break-all; }
+    #report menu { display:flex; justify-content:flex-end; gap:8px; margin:0; padding:0; }
+    #report menu button { font:inherit; font-size:13px; padding:5px 12px; cursor:pointer;
+                          border:1px solid var(--bd); border-radius:7px; background:#fff; }
+    #report menu button#reportGo { border-color:var(--acc); background:var(--acc); color:#fff; }
     footer { margin-top:14px; font-size:12px; color:var(--mut); }
     footer a { color:var(--acc); text-decoration:none; }
     footer a:hover { text-decoration:underline; }
@@ -45,110 +110,410 @@
 </head>
 <body>
     <h1>meco · WASM 三栏转换</h1>
-    <div class="sub">中间是 <b>Zvvnmod</b> 中间码（枢纽），两边各选一种编码，输入任一框即时互转 ——
-        全部由 Rust 核心编译的 WebAssembly 在浏览器本地完成。 <span id="status">加载 WASM…</span></div>
-
-    <div class="samples">
-        <span>样例(标准 Unicode):</span>
-        <button data-s="&#x1830;&#x1820;&#x180d;&#x1822;&#x180d;&#x1822;&#x1828;">ᠰᠠᠶᠢᠨ sain</button>
-        <button data-s="&#x182a;&#x1820;&#x182d;&#x1830;&#x1822;">ᠪᠠᠭᠰᠢ bagsi</button>
-        <button data-s="&#x182c;&#x1822;&#x182d;&#x1822;&#x180d;&#x1822;&#x1828;">ᠬᠢᠭᠢᠶᠢᠨ</button>
-    </div>
+    <div class="sub"><b>左栏输入，右栏只读输出</b>，中间是 <b>Zvvnmod</b> 中间码（枢纽，也可直接输入）——
+        全部由 Rust 核心编译的 WebAssembly 在浏览器本地完成。
+        <b>utn57</b> 只作右栏目标，左栏没有这个选项，因为 meco 不能反向解码；下拉里的国标编号悬停可看说明。
+        切换任一栏的编码会<b>立即按新编码重新转换</b>并换用该编码的字体；
+        不属于该栏编码的字符<b class="err">标红</b>（文字和下方码点同时标）。
+        <span id="status">加载 WASM…</span></div>
 
     <div class="panes">
         <div class="pane" id="paneL">
-            <div class="cap"><select id="encL"></select><span class="hint">左 left</span></div>
-            <textarea class="mong" id="boxL" placeholder="选编码 / 由中间转入"></textarea>
+            <div class="cap"><select id="encL"></select><span><span class="ro-badge" id="badgeL" hidden>只读</span> 左 left</span></div>
+            <div class="mongwrap" id="wrapL"><div class="mong bd" id="bdL" aria-hidden="true"></div><textarea class="mong" id="boxL" placeholder="选编码 / 由中间转入"></textarea></div>
             <div class="hex" id="hexL"></div>
         </div>
-        <div class="arrow">⇄</div>
+        <div class="arrow" id="arrow1">⇄</div>
         <div class="pane hub" id="paneM">
             <div class="cap"><span>zvvnmod · 中间码 hub</span></div>
-            <textarea class="mong" id="boxM" placeholder="Zvvnmod 中间码"></textarea>
+            <div class="mongwrap" id="wrapM"><div class="mong bd" id="bdM" aria-hidden="true"></div><textarea class="mong" id="boxM" placeholder="Zvvnmod 中间码"></textarea></div>
             <div class="hex" id="hexM"></div>
         </div>
-        <div class="arrow">⇄</div>
+        <div class="arrow" id="arrow2" title="单向：中间码 → 右栏">→</div>
         <div class="pane" id="paneR">
-            <div class="cap"><select id="encR"></select><span class="hint">右 right</span></div>
-            <textarea class="mong" id="boxR" placeholder="选编码 / 由中间转入"></textarea>
+            <div class="cap"><select id="encR"></select><span><span class="ro-badge" id="badgeR" hidden>只读输出</span> 右 right</span></div>
+            <div class="mongwrap" id="wrapR"><div class="mong bd" id="bdR" aria-hidden="true"></div><textarea class="mong" id="boxR" placeholder="选编码 / 由中间转入"></textarea></div>
             <div class="hex" id="hexR"></div>
         </div>
     </div>
 
-    <footer><a href="../">← 其他工具 / other tools</a> · <a href="https://github.com/Satsrag/meco-rust">Satsrag/meco-rust</a></footer>
+    <footer><a href="../">← 其他工具 / other tools</a> · <a href="https://github.com/Satsrag/meco-rust">Satsrag/meco-rust</a>
+        · <button type="button" class="linkbtn" id="report-open">报个问题 / report</button>
+        · <a href="#" id="forget" title="清空本浏览器记住的编码选择和文本">清除本地记忆</a></footer>
+
+    <div id="alert" hidden>
+        <span id="alertMsg"></span>
+        <button type="button" id="alertReport">报个问题</button>
+        <button type="button" id="alertClose" aria-label="关闭">×</button>
+    </div>
+
+    <dialog id="report">
+        <div class="rp">
+            <h2>报个问题 / Report a problem</h2>
+            <p>下面是<b>将要提交的全部内容</b>，此外不会发送任何东西。<b>在 GitHub 打开</b>会在新标签打开预填好的
+                issue 表单，内容在那里还能改，最后由你自己按提交；<b>用 Copilot 起草</b>则把提示词和这些数据
+                拷到剪贴板并打开 Copilot，粘贴后由它写描述。</p>
+            <label for="reportWhat">出了什么问题？（可留空，也可以到 GitHub 上再写）</label>
+            <textarea id="reportWhat" rows="2" placeholder="例：ᠰᠠᠶᠢᠨ 转 utn57，尾字母应该是 ᠨ"></textarea>
+            <pre id="reportBody"></pre>
+            <menu>
+                <button type="button" id="reportCancel">取消</button>
+                <button type="button" id="reportCopy">复制</button>
+                <button type="button" id="reportAI" title="拷贝提示词+数据并打开 Copilot，粘贴即可让它起草">用 Copilot 起草</button>
+                <button type="button" id="reportGo">在 GitHub 打开</button>
+            </menu>
+        </div>
+    </dialog>
 
 <script type="module">
 import init, { translate, version } from "./pkg/meco_wasm.js";
 
-const SIDE_TYPES = ["z52", "menk_shape", "menk_letter", "delehi"]; // supported (oyun/utn57 deferred)
+const SIDE_TYPES = ["z52", "menk_shape", "menk_letter", "delehi", "utn57"]; // oyun still deferred
+const OUTPUT_ONLY = new Set(["utn57"]); // meco can encode these, not decode them
+const SOURCE_TYPES = SIDE_TYPES.filter(t=>!OUTPUT_ONLY.has(t)); // the left pane must be decodable
+const TARGET_TYPES = [...OUTPUT_ONLY, ...SOURCE_TYPES];        // utn57 leads the output side
+
+// The national standard each Unicode-side encoding follows. z52 and menk_shape are vendor shape
+// codes with no standard behind them, so they stay bare.
+const STD = { delehi:"GB/T 25914-2010", menk_letter:"GB/T 25914-2010", utn57:"GB/T 25914-2023" };
+const STD_NOTE = {
+    delehi:      "德力海国际编码 · 以 GB/T 25914-2010 为基础的自定解释，FVS 为绝对语义",
+    menk_letter: "蒙科立国际标准编码 · GB/T 25914-2010 附录 A 的字面实现，FVS 为相对语义",
+    utn57:       "GB/T 25914-2023 / UTN #57 rev.4 · 绝对语义，新增 FVS4 U+180F",
+};
 const FONTS = {
     zvvnmod:"'zvvn mod'", delehi:"'delehi'", menk_letter:"'menk letter'",
-    menk_shape:"'menk shape'", z52:"'z52'",
+    menk_shape:"'menk shape'", z52:"'z52'", utn57:"'utn57'",
 };
 const FALLBACK = ",'zvvn mod',sans-serif";
-const SPECIAL = {0x0020:"SP",0x202f:"NNBSP",0x180e:"MVS",0x180b:"FVS1",0x180c:"FVS2",0x180d:"FVS3",0x180a:"NIRUGU"};
+const SPECIAL = {0x0020:"SP",0x202f:"NNBSP",0x180e:"MVS",0x180b:"FVS1",0x180c:"FVS2",0x180d:"FVS3",
+                 0x180f:"FVS4",0x180a:"NIRUGU",0x200d:"ZWJ",0x200c:"ZWNJ"};
 const $ = id => document.getElementById(id);
+let CORE = "?"; // filled in once the wasm module reports its version
 
-function hex(s){
+// --- "is this character even in the selected encoding?" -------------------
+// The encodings live in disjoint parts of the code space: the letter encodings are standard Unicode
+// Hudum, z52 borrows the Todo/Sibe/Manchu range as shape codes, and zvvnmod/menk_shape are PUA.
+// Anything neutral — space, NNBSP, MVS, FVS, punctuation, ASCII, CJK — is never flagged, because
+// meco passes it through by design; only a letter from the *wrong* encoding is a real mistake.
+function cls(cp){
+    if(cp>=0xE000 && cp<=0xF8FF) return "pua";
+    if(cp>=0x1820 && cp<=0x1842) return "hudum";
+    if(cp>=0x1843 && cp<=0x18AA) return "ext";
+    return null;
+}
+const EXPECT = { zvvnmod:"pua", menk_shape:"pua", z52:"ext",
+                 delehi:"hudum", menk_letter:"hudum", utn57:"hudum" };
+function foreign(cp, enc){ const c = cls(cp); return c !== null && c !== EXPECT[enc]; }
+
+const esc = t => t.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"})[c]);
+
+// The backdrop under a textarea: the same text, with out-of-encoding characters in red.
+function paint(text, enc){
+    let out = "", run = "", bad = null;
+    const flush = ()=>{ if(run){ out += bad ? `<span class="bad">${esc(run)}</span>` : esc(run); run = ""; } };
+    for(const ch of text){
+        const f = foreign(ch.codePointAt(0), enc);
+        if(f !== bad){ flush(); bad = f; }
+        run += ch;
+    }
+    flush();
+    return out + (text.endsWith("\n") ? " " : ""); // a trailing newline needs something to hold it
+}
+
+// --- local memory --------------------------------------------------------
+// Per-browser only: the selected encoding/font of each side plus what is in the three boxes, so a
+// reload lands you where you left off. Every access is guarded — storage throws outright in some
+// privacy modes, and a page that cannot remember must still work.
+const LS_KEY = "meco-wasm-demo/v1";
+function saveState(){
+    try{
+        localStorage.setItem(LS_KEY, JSON.stringify({
+            encL:$("encL").value, encR:$("encR").value,
+            L:$("boxL").value, M:$("boxM").value, R:$("boxR").value,
+        }));
+    }catch(e){ /* storage unavailable — carry on without memory */ }
+}
+function loadState(){
+    try{ return JSON.parse(localStorage.getItem(LS_KEY)) || null; }
+    catch(e){ return null; }
+}
+function forgetState(){
+    try{ localStorage.removeItem(LS_KEY); }catch(e){}
+    location.reload();
+}
+
+// One cell per code point, tagged with the UTF-16 range it occupies in the textarea, so selecting
+// text in a box can light up exactly the code points it covers.
+function hex(s, enc){
     if(!s) return "";
-    return Array.from(s).map(ch=>{
-        const cp = ch.codePointAt(0), n = SPECIAL[cp];
-        return `U+${cp.toString(16).toUpperCase().padStart(4,"0")}${n?` <span class="tag">${n}</span>`:""}`;
-    }).join("  ");
+    const cells = []; let i = 0;
+    for(const ch of s){
+        const cp = ch.codePointAt(0), n = SPECIAL[cp], from = i;
+        i += ch.length;
+        cells.push(`<span class="cu${foreign(cp,enc)?" bad":""}" data-a="${from}" data-b="${i}">`
+            + `U+${cp.toString(16).toUpperCase().padStart(4,"0")}`
+            + `${n?` <span class="tag">${n}</span>`:""}</span>`);
+    }
+    return cells.join("  ");
 }
-function fillSel(sel, def){ SIDE_TYPES.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;if(t===def)o.selected=true;sel.appendChild(o);}); }
+
+// Repaint one pane's backdrop and code-point row from its current text and encoding.
+function paintPane(which){
+    const enc = encOf(which), text = $("box"+which).value;
+    $("bd"+which).innerHTML = paint(text, enc);
+    $("hex"+which).innerHTML = hex(text, enc);
+}
+
+// Scroll a cell into view inside its own row — never via scrollIntoView, which would also move the
+// page — and only when it is actually out of sight.
+function reveal(row, el){
+    const r = el.getBoundingClientRect(), c = row.getBoundingClientRect(), pad = 4;
+    if(r.top < c.top)           row.scrollTop  += r.top - c.top - pad;
+    else if(r.bottom > c.bottom) row.scrollTop  += r.bottom - c.bottom + pad;
+    if(r.left < c.left)         row.scrollLeft += r.left - c.left - pad;
+    else if(r.right > c.right)   row.scrollLeft += r.right - c.right + pad;
+}
+
+// Light up the code-point cells covered by the current selection in that box, and bring the first
+// of them into view — the row is capped in height, so a long text hides most of it.
+function markSel(which){
+    const box = $("box"+which), a = box.selectionStart, b = box.selectionEnd, on = b > a;
+    const row = $("hex"+which);
+    let first = null;
+    row.querySelectorAll(".cu").forEach(el=>{
+        const hit = on && +el.dataset.a < b && +el.dataset.b > a;
+        el.classList.toggle("sel", hit);
+        if(hit && !first) first = el;
+    });
+    if(first) reveal(row, first);
+}
+function syncSel(){
+    ["L","M","R"].forEach(x=>{
+        if(document.activeElement === $("box"+x)) markSel(x);
+        else $("hex"+x).querySelectorAll(".cu.sel").forEach(el=>el.classList.remove("sel"));
+    });
+}
+function fillSel(sel, def, types){ types.forEach(t=>{
+    const o=document.createElement("option"); o.value=t;
+    o.textContent = STD[t] ? `${t} · ${STD[t]}` : t;
+    if(STD_NOTE[t]) o.title = STD_NOTE[t];
+    if(t===def) o.selected=true; sel.appendChild(o);
+}); }
 function encOf(which){ return which==="M" ? "zvvnmod" : (which==="L" ? $("encL").value : $("encR").value); }
-function applyFonts(){
-    $("boxL").style.fontFamily = FONTS[$("encL").value]+FALLBACK;
-    $("boxM").style.fontFamily = FONTS.zvvnmod+FALLBACK;
-    $("boxR").style.fontFamily = FONTS[$("encR").value]+FALLBACK;
+// Left is the input side, right is output. Only the left selector is restricted to encodings meco
+// can decode; the right may name any target, utn57 included.
+function applySide(which){
+    const box = $("box"+which), ro = which === "R";
+    $("wrap"+which).style.fontFamily = FONTS[$("enc"+which).value]+FALLBACK;
+    box.readOnly = ro;
+    box.placeholder = ro ? "只读输出 / output only" : "在此输入 / type here";
+    $("pane"+which).classList.toggle("ro", ro);
+    $("badge"+which).hidden = !ro;
 }
-function tr(from,to,s){ if(s==="") return ""; try{ return translate(from,to,s); }catch(e){ return null; } }
+function applyFonts(){
+    applySide("L");
+    $("wrapM").style.fontFamily = FONTS.zvvnmod+FALLBACK;
+    applySide("R");
+}
+// Returns the converted string, or null after recording why it failed in `errs[slot]`.
+const errs = {};
+function tr(from,to,s,slot){
+    errs[slot] = null;
+    if(s==="") return "";
+    try{ return translate(from,to,s); }
+    catch(e){ errs[slot] = (e && e.message) || String(e); return null; }
+}
+
+// Rerun the conversion for one side, in whichever direction that side can go. Changing a selector
+// calls this: picking a new encoding on the left means "re-read what I typed as that encoding", so
+// the left pane becomes the source and redrives the hub and the right pane. The right pane is
+// output only, so a new encoding there just re-encodes it from the hub.
+function reconvert(which){
+    if(which !== "R"){ recompute(which); return; }
+    errs[which] = null;
+    const out = tr("zvvnmod", encOf(which), $("boxM").value, which);
+    $("box"+which).value = out===null ? "" : out;
+    paintPane(which);
+    if(errs[which]) $("hex"+which).innerHTML = `<span class="err">${encOf(which)}: ${errs[which]}</span>`;
+    updateAlert();
+    saveState();
+}
 
 // recompute from a source box ("L" | "M" | "R")
 function recompute(src){
+    errs.L = errs.M = errs.R = null;
     const val = $("box"+src).value;
     const srcEnc = encOf(src);
     // to hub
-    let zv = src==="M" ? val : tr(srcEnc,"zvvnmod",val);
-    const setErr = (id)=>{ $(id).innerHTML = `<span class="err">转换错误 / unsupported</span>`; };
+    let zv = src==="M" ? val : tr(srcEnc,"zvvnmod",val,src);
+    const fail = (x,msg)=>{ $("hex"+x).innerHTML = `<span class="err">${msg}</span>`; };
     if(zv===null){ // source failed to decode
-        ["L","M","R"].filter(x=>x!==src).forEach(x=>{ $("box"+x).value=""; setErr("hex"+x); });
-        $("hex"+src).innerHTML = hex(val);
+        ["L","M","R"].filter(x=>x!==src).forEach(x=>{ $("box"+x).value=""; paintPane(x); fail(x,"转换错误 / unsupported"); });
+        paintPane(src);
         return;
     }
     if(src!=="M") $("boxM").value = zv;
     for(const x of ["L","M","R"]){
-        if(x===src) continue;
-        if(x==="M"){ /* already set */ }
-        else {
-            const out = tr("zvvnmod", encOf(x), zv);
-            $("box"+x).value = out===null ? "" : out;
-        }
+        if(x===src || x==="M") continue; // the hub is already set
+        const out = tr("zvvnmod", encOf(x), zv, x);
+        $("box"+x).value = out===null ? "" : out;
     }
-    ["L","M","R"].forEach(x=>{ $("hex"+x).innerHTML = hex($("box"+x).value); });
+    ["L","M","R"].forEach(x=>{
+        paintPane(x);
+        if(x!==src && errs[x]) fail(x, `${encOf(x)}: ${errs[x]}`);
+    });
+    updateAlert();
+    saveState();
+}
+
+// --- reporting -----------------------------------------------------------
+// Nothing is ever sent from this page. The report button assembles the state into a prefilled
+// GitHub issue URL, shows it in full, and only opens it when you say so; you submit it yourself.
+const ISSUE_NEW = "https://github.com/Satsrag/meco-rust/issues/new";
+const clip = (t,n)=> t.length > n ? t.slice(0,n) + ` … (截断，共 ${t.length} 字符)` : t;
+
+function diagnostics(){
+    const cps = t => Array.from(t||"").map(c =>
+        "U+" + c.codePointAt(0).toString(16).toUpperCase().padStart(4,"0")).join(" ");
+    return {
+        "from-encoding": encOf("L"),
+        "to-encoding": encOf("R"),
+        "input-codepoints":  clip(cps($("boxL").value), 900),
+        "hub-codepoints":    clip(cps($("boxM").value), 900),
+        "actual-codepoints": clip(cps($("boxR").value), 900),
+        "meco-error": errs.L || errs.M || errs.R || "",
+        "environment": [
+            `core: ${CORE} (wasm)`,
+            `page: ${location.href}`,
+            `fonts: ${[...document.fonts].map(f=>f.family+"="+f.status).join(" ")}`,
+            `ua: ${navigator.userAgent}`,
+        ].join("\n"),
+    };
+}
+const LABEL = {
+    "from-encoding":"源编码 / from", "to-encoding":"目标编码 / to",
+    "input-codepoints":"输入码点 / input", "hub-codepoints":"中间码 zvvnmod / hub",
+    "actual-codepoints":"实际输出 / actual", "meco-error":"meco 报错 / error",
+    "environment":"环境 / environment",
+};
+const reportText = d => Object.entries(d)
+    .map(([k,v]) => `${k}:\n${(v||"(空)").split("\n").map(l=>"  "+l).join("\n")}`).join("\n\n");
+
+// Markdown body for the *blank* issue form. GitHub only honours `title` and `body` there; the
+// per-field ids below work solely once the issue form exists on the default branch. Sending both
+// means the button is useful either way — whichever one the URL resolves to gets filled.
+function issueBody(d, what){
+    const block = k => "```\n" + (d[k] || "(空)") + "\n```";
+    return [
+        "### 出了什么问题 / What went wrong", "", what || "_(待补充)_", "",
+        `### ${LABEL["from-encoding"]}`, "", "`"+d["from-encoding"]+"`", "",
+        `### ${LABEL["to-encoding"]}`, "", "`"+d["to-encoding"]+"`", "",
+        `### ${LABEL["input-codepoints"]}`, "", block("input-codepoints"), "",
+        `### ${LABEL["hub-codepoints"]}`, "", block("hub-codepoints"), "",
+        `### ${LABEL["actual-codepoints"]}`, "", block("actual-codepoints"), "",
+        "### 期望输出 / Expected", "", "_(待补充)_", "",
+        `### ${LABEL["meco-error"]}`, "", block("meco-error"), "",
+        `### ${LABEL["environment"]}`, "", block("environment"), "",
+    ].join("\n");
+}
+function issueUrl(d, what){
+    const q = new URLSearchParams({
+        template: "converter-bug.yml",                                  // structured form, once merged
+        title: `[convert] ${d["from-encoding"]} → ${d["to-encoding"]}`,
+        what: what || "",
+        ...d,
+        body: issueBody(d, what),                                       // fallback for the blank form
+    });
+    return `${ISSUE_NEW}?${q}`;
+}
+
+// Copilot has no documented URL parameter for a prefilled prompt, so hand the prompt over through
+// the clipboard and open Copilot for pasting. It honours the repo's issue form when it drafts.
+const COPILOT = "https://github.com/copilot";
+const aiPrompt = (d, what) => [
+    "在 Satsrag/meco-rust 仓库建一个 issue，用 converter-bug.yml 表单。",
+    "这是蒙古文编码转换器的问题。下面是页面采集的诊断数据，请据此写标题和描述；",
+    "**码点序列原样保留，一个字符都不要改写或省略**。",
+    what ? `\n用户的说明：${what}` : "",
+    "\n" + reportText(d),
+].join("\n");
+function openReport(){
+    const d = diagnostics();
+    $("reportWhat").value = "";
+    $("reportBody").textContent = reportText(d);
+    $("report").dataset.payload = JSON.stringify(d);
+    $("report").showModal();
+}
+
+// The toast only fires on a real failure — meco throwing. Out-of-encoding text is already obvious
+// from the red marking and is usually the wrong encoding picked, not a bug, so it never nags.
+let shown = null;
+function updateAlert(){
+    const err = errs.L || errs.M || errs.R || null;
+    if(!err){ $("alert").hidden = true; shown = null; return; }
+    if(err === shown) return;              // same failure, already offered or dismissed
+    shown = err;
+    $("alertMsg").textContent = "转换报错：" + err;
+    $("alert").hidden = false;
 }
 
 function wire(){
-    fillSel($("encL"),"z52");
-    fillSel($("encR"),"menk_shape");
+    const st = loadState();
+    const pick = (v,def) => TARGET_TYPES.includes(v) ? v : def;
+    fillSel($("encL"), SOURCE_TYPES.includes(st && st.encL) ? st.encL : "z52", SOURCE_TYPES);
+    fillSel($("encR"), pick(st && st.encR, "menk_shape"), TARGET_TYPES);
     applyFonts();
-    const deb = src => { clearTimeout(window._t); window._t=setTimeout(()=>recompute(src),120); };
+    if(st){ // restore text verbatim: re-running the conversion could rewrite what you left here
+        ["L","M","R"].forEach(x=>{ $("box"+x).value = st[x] || ""; });
+    }
+    ["L","M","R"].forEach(paintPane);
+    $("forget").onclick = e => { e.preventDefault(); forgetState(); };
+    $("report-open").onclick = openReport;
+    $("alertReport").onclick = openReport;
+    $("alertClose").onclick = ()=>{ $("alert").hidden = true; };
+    $("reportCancel").onclick = ()=>$("report").close();
+    $("reportCopy").onclick = async ()=>{
+        const t = $("reportWhat").value.trim() + "\n\n" + $("reportBody").textContent;
+        try{ await navigator.clipboard.writeText(t.trim()); $("reportCopy").textContent = "已复制 ✓"; }
+        catch(e){ $("reportCopy").textContent = "复制失败"; }
+        setTimeout(()=>{ $("reportCopy").textContent = "复制"; }, 1600);
+    };
+    $("reportAI").onclick = async ()=>{
+        const d = JSON.parse($("report").dataset.payload);
+        try{
+            await navigator.clipboard.writeText(aiPrompt(d, $("reportWhat").value.trim()));
+            window.open(COPILOT, "_blank", "noopener");
+            $("report").close();
+        }catch(e){
+            $("reportAI").textContent = "复制失败，请用「复制」";
+            setTimeout(()=>{ $("reportAI").textContent = "用 Copilot 起草"; }, 2200);
+        }
+    };
+    $("reportGo").onclick = ()=>{
+        const d = JSON.parse($("report").dataset.payload);
+        window.open(issueUrl(d, $("reportWhat").value.trim()), "_blank", "noopener");
+        $("report").close();
+    };
+    const deb = src => { paintPane(src); clearTimeout(window._t);
+                         window._t = setTimeout(()=>recompute(src),120); };
     $("boxL").addEventListener("input",()=>deb("L"));
     $("boxM").addEventListener("input",()=>deb("M"));
     $("boxR").addEventListener("input",()=>deb("R"));
-    $("encL").onchange = ()=>{ applyFonts(); recompute("M"); };
-    $("encR").onchange = ()=>{ applyFonts(); recompute("M"); };
-    document.querySelectorAll(".samples button").forEach(b=>b.onclick=()=>{
-        // samples are standard Unicode (delehi); drive via the hub
-        const zv = tr("delehi","zvvnmod", b.getAttribute("data-s"));
-        $("boxM").value = zv===null ? "" : zv;
-        recompute("M");
-    });
+    // `selectionchange` on a textarea is the modern signal; the rest keeps older engines honest.
+    ["L","M","R"].forEach(x=>$("box"+x).addEventListener("scroll", ()=>{
+        $("bd"+x).scrollTop = $("box"+x).scrollTop; $("bd"+x).scrollLeft = $("box"+x).scrollLeft;
+    }));
+    document.addEventListener("selectionchange", syncSel);
+    ["L","M","R"].forEach(x=>["select","mouseup","keyup","focus","blur"].forEach(ev=>
+        $("box"+x).addEventListener(ev, syncSel)));
+    $("encL").onchange = ()=>{ applySide("L"); reconvert("L"); };
+    $("encR").onchange = ()=>{ applySide("R"); reconvert("R"); };
 }
 
 init().then(()=>{
-    $("status").textContent = "WASM 就绪 ✓  core v"+version();
+    CORE = version();
+    $("status").textContent = "WASM 就绪 ✓  core v"+CORE;
     wire();
 }).catch(e=>{ $("status").innerHTML = `<span class="err">WASM 加载失败: ${e}</span>`; });
 </script>
