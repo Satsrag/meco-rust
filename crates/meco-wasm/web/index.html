@@ -29,11 +29,19 @@
                  font-size:13px; color:var(--mut); margin-bottom:6px; }
     .pane .cap select { font-size:13px; padding:4px 8px; border:1px solid var(--bd); border-radius:6px; background:#fff; }
     .pane.hub .cap { color:var(--hub); font-weight:700; }
+    /* A textarea cannot colour individual characters, so each box is a transparent textarea over a
+       backdrop that paints the same text with the same metrics. Both inherit the pane's font. */
+    .mongwrap { position:relative; border:1px solid var(--bd); border-radius:9px; background:#fff; }
+    .pane.hub .mongwrap { border-color:var(--hub); background:#fffdf5; }
+    .pane.ro .mongwrap { background:#f6f5f1; }
     .mong { writing-mode:vertical-lr; text-orientation:sideways; height:300px; width:100%;
-            padding:12px; border:1px solid var(--bd); border-radius:9px; background:#fff;
-            font-size:30px; line-height:1.5; overflow:auto; white-space:pre-wrap; resize:vertical; }
-    .pane.hub .mong { border-color:var(--hub); background:#fffdf5; }
-    .pane.ro .mong { background:#f6f5f1; }
+            margin:0; padding:12px; border:0; background:transparent;
+            font-family:inherit; font-size:30px; line-height:1.5; white-space:pre-wrap; }
+    textarea.mong { position:relative; z-index:1; display:block; overflow:auto; resize:vertical;
+                    color:transparent; caret-color:#222; }
+    .bd { position:absolute; inset:0; z-index:0; color:#222; overflow:hidden; pointer-events:none; }
+    .bd .bad { color:#c0392b; }
+    textarea.mong::placeholder { color:#b6b1a5; }
     .ro-badge { font-size:11px; color:var(--acc); border:1px solid var(--acc); border-radius:5px; padding:0 4px; }
     .arrow { align-self:center; color:var(--mut); font-size:22px; padding-top:120px; }
     .hex { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; line-height:1.6;
@@ -43,6 +51,9 @@
     .cu { padding:1px 2px; border-radius:3px; }
     .cu.sel { background:var(--acc); color:#fff; }
     .cu.sel .tag { color:#b7e4d6; }
+    .cu.bad { color:#c0392b; }
+    .cu.sel.bad { background:#c0392b; color:#fff; }
+    .cu.sel.bad .tag { color:#f6d0cb; }
     .err { color:#c0392b; }
     footer { margin-top:14px; font-size:12px; color:var(--mut); }
     footer a { color:var(--acc); text-decoration:none; }
@@ -54,7 +65,8 @@
     <div class="sub"><b>左栏输入，右栏只读输出</b>，中间是 <b>Zvvnmod</b> 中间码（枢纽，也可直接输入）——
         全部由 Rust 核心编译的 WebAssembly 在浏览器本地完成。
         右栏可选 <b>utn57</b>（UTN #57 / GB/T 25914-2023）；它只作目标，左栏没有这个选项，因为 meco 不能反向解码。
-        切换任一栏的编码会<b>立即按新编码重新转换</b>并换用该编码的字体。
+        切换任一栏的编码会<b>立即按新编码重新转换</b>并换用该编码的字体；
+        不属于该栏编码的字符<b class="err">标红</b>（文字和下方码点同时标）。
         <span id="status">加载 WASM…</span></div>
 
     <div class="samples">
@@ -67,19 +79,19 @@
     <div class="panes">
         <div class="pane" id="paneL">
             <div class="cap"><select id="encL"></select><span><span class="ro-badge" id="badgeL" hidden>只读</span> 左 left</span></div>
-            <textarea class="mong" id="boxL" placeholder="选编码 / 由中间转入"></textarea>
+            <div class="mongwrap" id="wrapL"><div class="mong bd" id="bdL" aria-hidden="true"></div><textarea class="mong" id="boxL" placeholder="选编码 / 由中间转入"></textarea></div>
             <div class="hex" id="hexL"></div>
         </div>
         <div class="arrow">⇄</div>
         <div class="pane hub" id="paneM">
             <div class="cap"><span>zvvnmod · 中间码 hub</span></div>
-            <textarea class="mong" id="boxM" placeholder="Zvvnmod 中间码"></textarea>
+            <div class="mongwrap" id="wrapM"><div class="mong bd" id="bdM" aria-hidden="true"></div><textarea class="mong" id="boxM" placeholder="Zvvnmod 中间码"></textarea></div>
             <div class="hex" id="hexM"></div>
         </div>
         <div class="arrow" title="单向：中间码 → 右栏">→</div>
         <div class="pane" id="paneR">
             <div class="cap"><select id="encR"></select><span><span class="ro-badge" id="badgeR" hidden>只读输出</span> 右 right</span></div>
-            <textarea class="mong" id="boxR" placeholder="选编码 / 由中间转入"></textarea>
+            <div class="mongwrap" id="wrapR"><div class="mong bd" id="bdR" aria-hidden="true"></div><textarea class="mong" id="boxR" placeholder="选编码 / 由中间转入"></textarea></div>
             <div class="hex" id="hexR"></div>
         </div>
     </div>
@@ -101,6 +113,36 @@ const FALLBACK = ",'zvvn mod',sans-serif";
 const SPECIAL = {0x0020:"SP",0x202f:"NNBSP",0x180e:"MVS",0x180b:"FVS1",0x180c:"FVS2",0x180d:"FVS3",
                  0x180f:"FVS4",0x180a:"NIRUGU",0x200d:"ZWJ",0x200c:"ZWNJ"};
 const $ = id => document.getElementById(id);
+
+// --- "is this character even in the selected encoding?" -------------------
+// The encodings live in disjoint parts of the code space: the letter encodings are standard Unicode
+// Hudum, z52 borrows the Todo/Sibe/Manchu range as shape codes, and zvvnmod/menk_shape are PUA.
+// Anything neutral — space, NNBSP, MVS, FVS, punctuation, ASCII, CJK — is never flagged, because
+// meco passes it through by design; only a letter from the *wrong* encoding is a real mistake.
+function cls(cp){
+    if(cp>=0xE000 && cp<=0xF8FF) return "pua";
+    if(cp>=0x1820 && cp<=0x1842) return "hudum";
+    if(cp>=0x1843 && cp<=0x18AA) return "ext";
+    return null;
+}
+const EXPECT = { zvvnmod:"pua", menk_shape:"pua", z52:"ext",
+                 delehi:"hudum", menk_letter:"hudum", utn57:"hudum" };
+function foreign(cp, enc){ const c = cls(cp); return c !== null && c !== EXPECT[enc]; }
+
+const esc = t => t.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"})[c]);
+
+// The backdrop under a textarea: the same text, with out-of-encoding characters in red.
+function paint(text, enc){
+    let out = "", run = "", bad = null;
+    const flush = ()=>{ if(run){ out += bad ? `<span class="bad">${esc(run)}</span>` : esc(run); run = ""; } };
+    for(const ch of text){
+        const f = foreign(ch.codePointAt(0), enc);
+        if(f !== bad){ flush(); bad = f; }
+        run += ch;
+    }
+    flush();
+    return out + (text.endsWith("\n") ? " " : ""); // a trailing newline needs something to hold it
+}
 
 // --- local memory --------------------------------------------------------
 // Per-browser only: the selected encoding/font of each side plus what is in the three boxes, so a
@@ -126,17 +168,24 @@ function forgetState(){
 
 // One cell per code point, tagged with the UTF-16 range it occupies in the textarea, so selecting
 // text in a box can light up exactly the code points it covers.
-function hex(s){
+function hex(s, enc){
     if(!s) return "";
     const cells = []; let i = 0;
     for(const ch of s){
         const cp = ch.codePointAt(0), n = SPECIAL[cp], from = i;
         i += ch.length;
-        cells.push(`<span class="cu" data-a="${from}" data-b="${i}">`
+        cells.push(`<span class="cu${foreign(cp,enc)?" bad":""}" data-a="${from}" data-b="${i}">`
             + `U+${cp.toString(16).toUpperCase().padStart(4,"0")}`
             + `${n?` <span class="tag">${n}</span>`:""}</span>`);
     }
     return cells.join("  ");
+}
+
+// Repaint one pane's backdrop and code-point row from its current text and encoding.
+function paintPane(which){
+    const enc = encOf(which), text = $("box"+which).value;
+    $("bd"+which).innerHTML = paint(text, enc);
+    $("hex"+which).innerHTML = hex(text, enc);
 }
 
 // Light up the code-point cells covered by the current selection in that box.
@@ -161,7 +210,7 @@ function encOf(which){ return which==="M" ? "zvvnmod" : (which==="L" ? $("encL")
 // can decode; the right may name any target, utn57 included.
 function applySide(which){
     const box = $("box"+which), ro = which === "R";
-    box.style.fontFamily = FONTS[$("enc"+which).value]+FALLBACK;
+    $("wrap"+which).style.fontFamily = FONTS[$("enc"+which).value]+FALLBACK;
     box.readOnly = ro;
     box.placeholder = ro ? "只读输出 / output only" : "在此输入 / type here";
     $("pane"+which).classList.toggle("ro", ro);
@@ -169,7 +218,7 @@ function applySide(which){
 }
 function applyFonts(){
     applySide("L");
-    $("boxM").style.fontFamily = FONTS.zvvnmod+FALLBACK;
+    $("wrapM").style.fontFamily = FONTS.zvvnmod+FALLBACK;
     applySide("R");
 }
 // Returns the converted string, or null after recording why it failed in `errs[slot]`.
@@ -190,9 +239,8 @@ function reconvert(which){
     errs[which] = null;
     const out = tr("zvvnmod", encOf(which), $("boxM").value, which);
     $("box"+which).value = out===null ? "" : out;
-    $("hex"+which).innerHTML = errs[which]
-        ? `<span class="err">${encOf(which)}: ${errs[which]}</span>`
-        : hex($("box"+which).value);
+    paintPane(which);
+    if(errs[which]) $("hex"+which).innerHTML = `<span class="err">${encOf(which)}: ${errs[which]}</span>`;
     saveState();
 }
 
@@ -205,8 +253,8 @@ function recompute(src){
     let zv = src==="M" ? val : tr(srcEnc,"zvvnmod",val,src);
     const fail = (x,msg)=>{ $("hex"+x).innerHTML = `<span class="err">${msg}</span>`; };
     if(zv===null){ // source failed to decode
-        ["L","M","R"].filter(x=>x!==src).forEach(x=>{ $("box"+x).value=""; fail(x,"转换错误 / unsupported"); });
-        $("hex"+src).innerHTML = hex(val);
+        ["L","M","R"].filter(x=>x!==src).forEach(x=>{ $("box"+x).value=""; paintPane(x); fail(x,"转换错误 / unsupported"); });
+        paintPane(src);
         return;
     }
     if(src!=="M") $("boxM").value = zv;
@@ -216,8 +264,8 @@ function recompute(src){
         $("box"+x).value = out===null ? "" : out;
     }
     ["L","M","R"].forEach(x=>{
+        paintPane(x);
         if(x!==src && errs[x]) fail(x, `${encOf(x)}: ${errs[x]}`);
-        else $("hex"+x).innerHTML = hex($("box"+x).value);
     });
     saveState();
 }
@@ -229,17 +277,19 @@ function wire(){
     fillSel($("encR"), pick(st && st.encR, "menk_shape"), SIDE_TYPES);
     applyFonts();
     if(st){ // restore text verbatim: re-running the conversion could rewrite what you left here
-        ["L","M","R"].forEach(x=>{
-            $("box"+x).value = st[x] || "";
-            $("hex"+x).innerHTML = hex($("box"+x).value);
-        });
+        ["L","M","R"].forEach(x=>{ $("box"+x).value = st[x] || ""; });
     }
+    ["L","M","R"].forEach(paintPane);
     $("forget").onclick = e => { e.preventDefault(); forgetState(); };
-    const deb = src => { clearTimeout(window._t); window._t=setTimeout(()=>recompute(src),120); };
+    const deb = src => { paintPane(src); clearTimeout(window._t);
+                         window._t = setTimeout(()=>recompute(src),120); };
     $("boxL").addEventListener("input",()=>deb("L"));
     $("boxM").addEventListener("input",()=>deb("M"));
     $("boxR").addEventListener("input",()=>deb("R"));
     // `selectionchange` on a textarea is the modern signal; the rest keeps older engines honest.
+    ["L","M","R"].forEach(x=>$("box"+x).addEventListener("scroll", ()=>{
+        $("bd"+x).scrollTop = $("box"+x).scrollTop; $("bd"+x).scrollLeft = $("box"+x).scrollLeft;
+    }));
     document.addEventListener("selectionchange", syncSel);
     ["L","M","R"].forEach(x=>["select","mouseup","keyup","focus","blur"].forEach(ev=>
         $("box"+x).addEventListener(ev, syncSel)));
