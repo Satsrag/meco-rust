@@ -1,0 +1,99 @@
+name: 转换问题 / Conversion bug
+description: 某个词转换结果不对、报错，或者两种编码之间对不上。/ A word converts wrongly, errors out, or two encodings disagree.
+title: "[convert] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        大部分字段可以由 [在线转换器](https://www.satsrag.dev/convert/) 的「报个问题」按钮自动填好 ——
+        在页面上点它，会带着码点序列跳到这里。手工填也可以，**码点序列比截图有用得多**。
+
+        Most fields are prefilled by the **报个问题 / Report** button in the
+        [online converter](https://www.satsrag.dev/convert/). Filling them by hand is fine too —
+        code-point sequences are far more useful than a screenshot.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: 出了什么问题 / What went wrong
+      description: 一两句话就够。/ A sentence or two is enough.
+      placeholder: ᠰᠠᠶᠢᠨ 从 delehi 转 utn57，尾字母应该是 ᠨ，实际给了 ᠠ + FVS2。
+    validations:
+      required: true
+
+  - type: input
+    id: from-encoding
+    attributes:
+      label: 源编码 / Source encoding
+      placeholder: delehi
+    validations:
+      required: true
+
+  - type: input
+    id: to-encoding
+    attributes:
+      label: 目标编码 / Target encoding
+      placeholder: utn57
+    validations:
+      required: true
+
+  - type: textarea
+    id: input-codepoints
+    attributes:
+      label: 输入码点 / Input code points
+      description: 形如 `U+1830 U+1820 U+180D …`。转换器页面每个框下方那一行就是。
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: hub-codepoints
+    attributes:
+      label: 中间码（zvvnmod）码点 / Hub code points
+      description: 转换是 源 → zvvnmod → 目标，中间这一步往往能指出问题出在哪一半。
+      render: text
+
+  - type: textarea
+    id: actual-codepoints
+    attributes:
+      label: 实际输出码点 / Actual output code points
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望输出 / Expected output
+      description: 码点序列最好；写清楚“应该显示成什么字形”也行。
+      render: text
+
+  - type: textarea
+    id: meco-error
+    attributes:
+      label: meco 报的错 / Error from meco
+      description: 有的话贴原文；没报错就留空。
+      render: text
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境 / Environment
+      description: meco-core 版本、浏览器或 CLI、字体加载情况。
+      render: text
+      placeholder: |
+        core: 0.3.1 (wasm)
+        page: https://www.satsrag.dev/convert/
+        fonts: delehi=loaded zvvn mod=loaded utn57=loaded
+        ua: Mozilla/5.0 …
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前 / Before submitting
+      options:
+        - label: 我确认过输入文本确实是所选源编码（转换器里越界字符会标红）。/ I checked the input really is in the selected source encoding — the converter reds out characters that are not.
+          required: true
+        - label: 上面的内容我看过，不包含我不愿公开的文字。/ I have read the content above and it contains nothing I mind publishing.
+          required: true
