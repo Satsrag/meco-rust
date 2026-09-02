@@ -4,7 +4,7 @@
 #   crates/meco-wasm/web/build.sh [OUT_DIR]     # default OUT_DIR: crates/meco-wasm/web/dist
 #
 # Produces OUT_DIR/{index.html, pkg/, fonts/}. Fonts are the per-encoding fonts the demo needs to
-# render Menksoft/Z52 PUA text; they are fetched from the meco font repo rather than committed here.
+# render Menksoft/Z52 PUA text and UTN #57 Unicode text; they are fetched rather than committed here.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,6 +33,19 @@ fetch "fonts/z52/7%20-%20Z52%20Tsagaan%20Tig.otf"  z52.otf
 [ -f "$out/fonts/ZvvnMod.ttf" ] || \
     curl -sfL "https://raw.githubusercontent.com/Satsrag/satsrag.github.io/HEAD/mapping/assets/zvvnmod.ttf" \
          -o "$out/fonts/ZvvnMod.ttf"
+
+# utn57.ttf = Noto Sans Mongolian 3.002, the mongfontbuilder reference build for UTN #57 shaping
+# (SIL OFL 1.1 — the licence is staged next to it).
+noto_ver=3.002
+if [ ! -f "$out/fonts/utn57.ttf" ]; then
+    tmp="$(mktemp -d)"
+    curl -sfL -o "$tmp/noto.zip" \
+        "https://github.com/notofonts/mongolian/releases/download/NotoSansMongolian-v${noto_ver}/NotoSansMongolian-v${noto_ver}.zip"
+    unzip -q -o "$tmp/noto.zip" -d "$tmp"
+    cp "$tmp/NotoSansMongolian/full/ttf/NotoSansMongolian-Regular.ttf" "$out/fonts/utn57.ttf"
+    cp "$tmp/OFL.txt" "$out/fonts/utn57-NotoSansMongolian-OFL.txt"
+    rm -rf "$tmp"
+fi
 
 cp "$here/index.html" "$out/index.html"
 echo "==> done: $out"

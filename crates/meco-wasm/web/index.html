@@ -5,12 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>meco · WASM 三栏转换 (Zvvnmod 枢纽)</title>
 <style>
-    /* per-encoding fonts (copied from meco static/fonts) */
+    /* per-encoding fonts (copied from meco static/fonts; utn57 = Noto Sans Mongolian 3.002) */
     @font-face { font-family:"delehi";      src:url("fonts/delehi.ttf")       format("truetype"); }
     @font-face { font-family:"menk letter"; src:url("fonts/menk_letter.ttf")  format("truetype"); }
     @font-face { font-family:"menk shape";  src:url("fonts/menk_shape.ttf")   format("truetype"); }
     @font-face { font-family:"zvvn mod";    src:url("fonts/ZvvnMod.ttf")      format("truetype"); }
     @font-face { font-family:"z52";         src:url("fonts/z52.otf")          format("opentype"); }
+    @font-face { font-family:"utn57";        src:url("fonts/utn57.ttf")        format("truetype"); }
 
     :root { --bd:#dcd8cd; --mut:#8a8577; --acc:#2d7d6f; --hub:#b8860b; --bg:#faf9f6; }
     * { box-sizing:border-box; }
@@ -32,6 +33,11 @@
             padding:12px; border:1px solid var(--bd); border-radius:9px; background:#fff;
             font-size:30px; line-height:1.5; overflow:auto; white-space:pre-wrap; resize:vertical; }
     .pane.hub .mong { border-color:var(--hub); background:#fffdf5; }
+    .pane.ro .mong { background:#f6f5f1; }
+    .ro-badge { font-size:11px; color:var(--acc); border:1px solid var(--acc); border-radius:5px; padding:0 4px; }
+    .reconv { font-size:13px; line-height:1; padding:4px 7px; margin-right:auto;
+              border:1px solid var(--bd); border-radius:6px; background:#fff; color:var(--mut); cursor:pointer; }
+    .reconv:hover { color:var(--acc); border-color:var(--acc); }
     .arrow { align-self:center; color:var(--mut); font-size:22px; padding-top:120px; }
     .hex { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; line-height:1.6;
            color:#555; background:#f3f1ea; border:1px solid var(--bd); border-radius:8px;
@@ -46,7 +52,11 @@
 <body>
     <h1>meco · WASM 三栏转换</h1>
     <div class="sub">中间是 <b>Zvvnmod</b> 中间码（枢纽），两边各选一种编码，输入任一框即时互转 ——
-        全部由 Rust 核心编译的 WebAssembly 在浏览器本地完成。 <span id="status">加载 WASM…</span></div>
+        全部由 Rust 核心编译的 WebAssembly 在浏览器本地完成。
+        <b>utn57</b> 是只读输出（UTN #57 / GB/T 25914-2023，暂不支持反向解码）。
+        切换左右下拉<b>只更换渲染字体</b>，文本原样保留 —— 同一串码点在 Menk / Delehi / UTN&nbsp;#57
+        三种约定下的字形差别可以直接对照；要按新编码重算文本，点该栏的 <b>↻</b>。
+        <span id="status">加载 WASM…</span></div>
 
     <div class="samples">
         <span>样例(标准 Unicode):</span>
@@ -57,7 +67,7 @@
 
     <div class="panes">
         <div class="pane" id="paneL">
-            <div class="cap"><select id="encL"></select><span class="hint">左 left</span></div>
+            <div class="cap"><select id="encL"></select><button class="reconv" id="reconvL" title="按当前编码从中间码重新转换">↻</button><span><span class="ro-badge" id="badgeL" hidden>只读</span> 左 left</span></div>
             <textarea class="mong" id="boxL" placeholder="选编码 / 由中间转入"></textarea>
             <div class="hex" id="hexL"></div>
         </div>
@@ -69,7 +79,7 @@
         </div>
         <div class="arrow">⇄</div>
         <div class="pane" id="paneR">
-            <div class="cap"><select id="encR"></select><span class="hint">右 right</span></div>
+            <div class="cap"><select id="encR"></select><button class="reconv" id="reconvR" title="按当前编码从中间码重新转换">↻</button><span><span class="ro-badge" id="badgeR" hidden>只读</span> 右 right</span></div>
             <textarea class="mong" id="boxR" placeholder="选编码 / 由中间转入"></textarea>
             <div class="hex" id="hexR"></div>
         </div>
@@ -80,13 +90,15 @@
 <script type="module">
 import init, { translate, version } from "./pkg/meco_wasm.js";
 
-const SIDE_TYPES = ["z52", "menk_shape", "menk_letter", "delehi"]; // supported (oyun/utn57 deferred)
+const SIDE_TYPES = ["z52", "menk_shape", "menk_letter", "delehi", "utn57"]; // oyun still deferred
+const OUTPUT_ONLY = new Set(["utn57"]); // meco can encode these, not decode them
 const FONTS = {
     zvvnmod:"'zvvn mod'", delehi:"'delehi'", menk_letter:"'menk letter'",
-    menk_shape:"'menk shape'", z52:"'z52'",
+    menk_shape:"'menk shape'", z52:"'z52'", utn57:"'utn57'",
 };
 const FALLBACK = ",'zvvn mod',sans-serif";
-const SPECIAL = {0x0020:"SP",0x202f:"NNBSP",0x180e:"MVS",0x180b:"FVS1",0x180c:"FVS2",0x180d:"FVS3",0x180a:"NIRUGU"};
+const SPECIAL = {0x0020:"SP",0x202f:"NNBSP",0x180e:"MVS",0x180b:"FVS1",0x180c:"FVS2",0x180d:"FVS3",
+                 0x180f:"FVS4",0x180a:"NIRUGU",0x200d:"ZWJ",0x200c:"ZWNJ"};
 const $ = id => document.getElementById(id);
 
 function hex(s){
@@ -96,37 +108,67 @@ function hex(s){
         return `U+${cp.toString(16).toUpperCase().padStart(4,"0")}${n?` <span class="tag">${n}</span>`:""}`;
     }).join("  ");
 }
-function fillSel(sel, def){ SIDE_TYPES.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;if(t===def)o.selected=true;sel.appendChild(o);}); }
+function fillSel(sel, def){ SIDE_TYPES.forEach(t=>{
+    const o=document.createElement("option"); o.value=t;
+    o.textContent = OUTPUT_ONLY.has(t) ? t+" （只读 output-only）" : t;
+    if(t===def) o.selected=true; sel.appendChild(o);
+}); }
 function encOf(which){ return which==="M" ? "zvvnmod" : (which==="L" ? $("encL").value : $("encR").value); }
-function applyFonts(){
-    $("boxL").style.fontFamily = FONTS[$("encL").value]+FALLBACK;
-    $("boxM").style.fontFamily = FONTS.zvvnmod+FALLBACK;
-    $("boxR").style.fontFamily = FONTS[$("encR").value]+FALLBACK;
+// A side pane whose encoding is output-only cannot be typed into: meco has no decoder for it.
+function applySide(which){
+    const enc = $("enc"+which).value, box = $("box"+which), ro = OUTPUT_ONLY.has(enc);
+    box.style.fontFamily = FONTS[enc]+FALLBACK;
+    box.readOnly = ro;
+    box.placeholder = ro ? "只读输出 / output only" : "选编码 / 由中间转入";
+    $("pane"+which).classList.toggle("ro", ro);
+    $("badge"+which).hidden = !ro;
 }
-function tr(from,to,s){ if(s==="") return ""; try{ return translate(from,to,s); }catch(e){ return null; } }
+function applyFonts(){
+    applySide("L");
+    $("boxM").style.fontFamily = FONTS.zvvnmod+FALLBACK;
+    applySide("R");
+}
+// Returns the converted string, or null after recording why it failed in `errs[slot]`.
+const errs = {};
+function tr(from,to,s,slot){
+    errs[slot] = null;
+    if(s==="") return "";
+    try{ return translate(from,to,s); }
+    catch(e){ errs[slot] = (e && e.message) || String(e); return null; }
+}
+
+// Re-encode one side from the hub, in whatever encoding that side currently selects.
+function reconvert(which){
+    const out = tr("zvvnmod", encOf(which), $("boxM").value, which);
+    $("box"+which).value = out===null ? "" : out;
+    $("hex"+which).innerHTML = errs[which]
+        ? `<span class="err">${encOf(which)}: ${errs[which]}</span>`
+        : hex($("box"+which).value);
+}
 
 // recompute from a source box ("L" | "M" | "R")
 function recompute(src){
+    errs.L = errs.M = errs.R = null;
     const val = $("box"+src).value;
     const srcEnc = encOf(src);
     // to hub
-    let zv = src==="M" ? val : tr(srcEnc,"zvvnmod",val);
-    const setErr = (id)=>{ $(id).innerHTML = `<span class="err">转换错误 / unsupported</span>`; };
+    let zv = src==="M" ? val : tr(srcEnc,"zvvnmod",val,src);
+    const fail = (x,msg)=>{ $("hex"+x).innerHTML = `<span class="err">${msg}</span>`; };
     if(zv===null){ // source failed to decode
-        ["L","M","R"].filter(x=>x!==src).forEach(x=>{ $("box"+x).value=""; setErr("hex"+x); });
+        ["L","M","R"].filter(x=>x!==src).forEach(x=>{ $("box"+x).value=""; fail(x,"转换错误 / unsupported"); });
         $("hex"+src).innerHTML = hex(val);
         return;
     }
     if(src!=="M") $("boxM").value = zv;
     for(const x of ["L","M","R"]){
-        if(x===src) continue;
-        if(x==="M"){ /* already set */ }
-        else {
-            const out = tr("zvvnmod", encOf(x), zv);
-            $("box"+x).value = out===null ? "" : out;
-        }
+        if(x===src || x==="M") continue; // the hub is already set
+        const out = tr("zvvnmod", encOf(x), zv, x);
+        $("box"+x).value = out===null ? "" : out;
     }
-    ["L","M","R"].forEach(x=>{ $("hex"+x).innerHTML = hex($("box"+x).value); });
+    ["L","M","R"].forEach(x=>{
+        if(x!==src && errs[x]) fail(x, `${encOf(x)}: ${errs[x]}`);
+        else $("hex"+x).innerHTML = hex($("box"+x).value);
+    });
 }
 
 function wire(){
@@ -137,11 +179,15 @@ function wire(){
     $("boxL").addEventListener("input",()=>deb("L"));
     $("boxM").addEventListener("input",()=>deb("M"));
     $("boxR").addEventListener("input",()=>deb("R"));
-    $("encL").onchange = ()=>{ applyFonts(); recompute("M"); };
-    $("encR").onchange = ()=>{ applyFonts(); recompute("M"); };
+    // Changing a side only reswaps that pane's font: the same code points render differently under
+    // the Menk / Delehi / UTN #57 conventions, and that comparison is the point. ↻ recomputes.
+    $("encL").onchange = ()=>applySide("L");
+    $("encR").onchange = ()=>applySide("R");
+    $("reconvL").onclick = ()=>reconvert("L");
+    $("reconvR").onclick = ()=>reconvert("R");
     document.querySelectorAll(".samples button").forEach(b=>b.onclick=()=>{
         // samples are standard Unicode (delehi); drive via the hub
-        const zv = tr("delehi","zvvnmod", b.getAttribute("data-s"));
+        const zv = tr("delehi","zvvnmod", b.getAttribute("data-s"), "M");
         $("boxM").value = zv===null ? "" : zv;
         recompute("M");
     });
