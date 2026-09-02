@@ -77,29 +77,46 @@
     .cu.sel.bad { background:#c0392b; color:#fff; }
     .cu.sel.bad .tag { color:#f6d0cb; }
     .err { color:#c0392b; }
-    .linkbtn { font:inherit; color:var(--acc); background:none; border:0; padding:0; cursor:pointer;
-               text-decoration:underline; }
-    /* Error toast: fixed, so raising it never reflows the three-pane grid. */
-    #alert { position:fixed; right:20px; bottom:16px; z-index:20; max-width:min(520px,calc(100vw - 40px));
-             display:flex; gap:10px; align-items:flex-start;
-             font-size:12px; line-height:1.5; color:#7d2b20; background:#fdf1ef;
-             border:1px solid #e5b3aa; border-radius:9px; padding:10px 12px;
-             box-shadow:0 6px 20px rgb(60 20 10 / .12); }
-    #alert button { flex:0 0 auto; font:inherit; font-size:12px; padding:2px 8px; cursor:pointer;
-                    color:#7d2b20; background:#fff; border:1px solid #d99a90; border-radius:6px; }
+    /* Always-on bar in the page column, never floating, so it cannot cover the code-point rows.
+       Calm but visible while things work; solid red the moment a conversion actually fails. */
+    #alert { flex:0 0 auto; display:flex; gap:10px; align-items:center; margin-bottom:8px;
+             font-size:13px; line-height:1.45; color:#12463a; background:#e4f3ec;
+             border:1px solid var(--acc); border-radius:9px; padding:8px 12px; }
     #alert span { flex:1 1 auto; min-width:0; word-break:break-word; }
+    #alert button { flex:0 0 auto; font:inherit; font-size:12px; font-weight:600; padding:4px 11px;
+                    cursor:pointer; color:#fff; background:var(--acc); border:1px solid var(--acc);
+                    border-radius:6px; }
+    #alert button:hover { filter:brightness(1.12); }
+    #alert button[hidden] { display:none; }
+    #alert.bad { color:#fff; background:#c0392b; border-color:#9c2d20;
+                 box-shadow:0 2px 12px rgb(160 45 30 / .28); }
+    #alert.bad::before { content:"⚠"; flex:0 0 auto; font-size:17px; line-height:1; }
+    #alert.bad button { color:#c0392b; background:#fff; border-color:#fff; }
+    #alert.bad button:hover { filter:none; background:#ffe6e2; }
+    @keyframes alertIn { from { opacity:.4; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+    #alert.bad { animation:alertIn .18s ease-out; }
+    @media (prefers-reduced-motion: reduce) { #alert.bad { animation:none; } }
     #report { width:min(760px,92vw); border:1px solid var(--bd); border-radius:12px; padding:0;
               color:#222; background:var(--bg); }
     #report::backdrop { background:rgb(20 18 12 / .38); }
+    /* The dialog gets out of its own way while a frame is captured — the point of the shot is the
+       panes underneath it. Hidden by visibility, not display, so nothing reflows. */
+    #report.capturing { visibility:hidden; }
+    #report.capturing::backdrop { background:transparent; }
     #report .rp { padding:16px 18px; }
     #report h2 { margin:0 0 6px; font-size:15px; }
     #report p { margin:0 0 12px; font-size:12px; line-height:1.6; color:var(--mut); }
     #report label { display:block; font-size:12px; color:var(--mut); margin-bottom:4px; }
     #reportWhat { width:100%; font:inherit; font-size:13px; padding:6px 8px; margin-bottom:12px;
                   border:1px solid var(--bd); border-radius:6px; background:#fff; resize:vertical; }
-    .shot { margin-bottom:12px; font-size:12px; color:var(--mut); line-height:1.6; }
+    .shot { margin-bottom:12px; font-size:12px; color:var(--mut); line-height:1.6;
+            border:1px dashed var(--bd); border-radius:9px; padding:10px 12px; background:#fbfaf7; }
     .shot button { font:inherit; font-size:12px; padding:3px 9px; margin-right:6px; cursor:pointer;
                    border:1px solid var(--bd); border-radius:6px; background:#fff; }
+    /* The capture is the one thing here worth doing, so it does not look like its own siblings. */
+    .shot #shotGrab { font-size:13px; font-weight:600; padding:6px 14px;
+                      color:#fff; background:var(--acc); border-color:var(--acc); }
+    .shot #shotGrab:hover { filter:brightness(1.12); }
     .shot #shotNote { display:block; margin-top:6px; }
     #shotPreview { display:block; max-width:100%; max-height:22vh; margin-top:8px;
                    border:1px solid var(--bd); border-radius:8px; }
@@ -131,6 +148,12 @@
         重新转换并换用该编码的字体；不属于该栏编码的字符<b class="err">标红</b>（文字和码点同时）。</span>
         <span id="status">loading WASM… / 加载中…</span></div>
 
+    <div id="alert">
+        <span id="alertMsg"></span>
+        <button type="button" id="alertReport">Report / 报个问题</button>
+        <button type="button" id="alertClose" aria-label="dismiss / 关闭" hidden>×</button>
+    </div>
+
     <div class="panes">
         <div class="pane" id="paneL">
             <div class="cap"><select id="encL"></select><span><span class="ro-badge" id="badgeL" hidden>read-only</span> Left / 左</span></div>
@@ -152,14 +175,8 @@
     </div>
 
     <footer><a href="../">← other tools / 其他工具</a> · <a href="https://github.com/Satsrag/meco-rust">Satsrag/meco-rust</a>
-        · <button type="button" class="linkbtn" id="report-open">Report a problem / 报个问题</button>
         · <a href="#" id="forget" title="clear the encodings and text this browser remembers / 清空本浏览器记住的编码选择和文本">forget local memory / 清除本地记忆</a></footer>
 
-    <div id="alert" hidden>
-        <span id="alertMsg"></span>
-        <button type="button" id="alertReport">Report / 报个问题</button>
-        <button type="button" id="alertClose" aria-label="dismiss / 关闭">×</button>
-    </div>
 
     <dialog id="report">
         <div class="rp">
@@ -174,7 +191,7 @@
             <label for="reportWhat">What went wrong? Optional — you can also write it on GitHub. / 出了什么问题？可留空。</label>
             <textarea id="reportWhat" rows="2" placeholder="e.g. ᠰᠠᠶᠢᠨ to utn57, the final letter should be ᠨ / 例：尾字母应该是 ᠨ"></textarea>
             <div class="shot">
-                <button type="button" id="shotGrab">Add a screenshot / 加一张截图</button>
+                <button type="button" id="shotGrab">📷 Add a screenshot / 加一张截图</button>
                 <button type="button" id="shotDrop" hidden>Remove / 移除</button>
                 <button type="button" id="shotSave" hidden>Download PNG / 下载 PNG</button>
                 <span id="shotNote">A GitHub link cannot carry an image, so the screenshot goes to your clipboard — paste it into the issue. / GitHub 的链接塞不进图片，所以截图放进剪贴板，你在 issue 里粘贴即可。</span>
@@ -485,8 +502,13 @@ let shot = null; // Blob
 const canShoot = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
 
 async function grabShot(){
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: "browser" }, audio: false, preferCurrentTab: true });
+    $("report").classList.add("capturing");
+    // let the hide actually paint before any frame can be grabbed
+    await new Promise(r => requestAnimationFrame(()=>requestAnimationFrame(r)));
+    let stream;
+    try{ stream = await navigator.mediaDevices.getDisplayMedia({
+             video: { displaySurface: "browser" }, audio: false, preferCurrentTab: true }); }
+    catch(e){ $("report").classList.remove("capturing"); throw e; }
     try{
         const video = Object.assign(document.createElement("video"), { srcObject: stream, muted: true });
         await video.play();
@@ -495,13 +517,16 @@ async function grabShot(){
                                 { width: video.videoWidth, height: video.videoHeight });
         c.getContext("2d").drawImage(video, 0, 0);
         return await new Promise(r => c.toBlob(r, "image/png"));
-    } finally { stream.getTracks().forEach(t=>t.stop()); }
+    } finally {
+        stream.getTracks().forEach(t=>t.stop());
+        $("report").classList.remove("capturing");
+    }
 }
 function showShot(blob){
     shot = blob;
     $("shotPreview").hidden = !blob;
     $("shotDrop").hidden = $("shotSave").hidden = !blob;
-    $("shotGrab").textContent = blob ? "Retake / 重新截图" : "Add a screenshot / 加一张截图";
+    $("shotGrab").textContent = blob ? "📷 Retake / 重新截图" : "📷 Add a screenshot / 加一张截图";
     if(blob) $("shotPreview").src = URL.createObjectURL(blob);
 }
 async function shotToClipboard(){
@@ -521,16 +546,25 @@ function openReport(){
     $("report").showModal();
 }
 
-// The toast only fires on a real failure — meco throwing. Out-of-encoding text is already obvious
-// from the red marking and is usually the wrong encoding picked, not a bug, so it never nags.
+// The bar is always there — the report entry point should never be hunted for. It only turns red
+// when meco actually throws. Out-of-encoding text is already obvious from the red marking and is
+// usually the wrong encoding picked rather than a bug, so it does not raise the alarm.
+const IDLE_MSG = "A conversion looks wrong? Report it — the code points go along automatically. "
+               + "/ 转换结果不对？点右边报一下，码点会自动带上。";
 let shown = null;
+function idle(){
+    $("alert").classList.remove("bad");
+    $("alertMsg").textContent = IDLE_MSG;
+    $("alertClose").hidden = true;
+}
 function updateAlert(){
     const err = errs.L || errs.M || errs.R || null;
-    if(!err){ $("alert").hidden = true; shown = null; return; }
-    if(err === shown) return;              // same failure, already offered or dismissed
+    if(!err){ idle(); shown = null; return; }
+    if(err === shown) return;              // same failure, already raised or dismissed
     shown = err;
+    $("alert").classList.add("bad");
     $("alertMsg").textContent = "Conversion failed / 转换报错: " + err;
-    $("alert").hidden = false;
+    $("alertClose").hidden = false;
 }
 
 function wire(){
@@ -543,10 +577,10 @@ function wire(){
         ["L","M","R"].forEach(x=>{ $("box"+x).value = st[x] || ""; });
     }
     ["L","M","R"].forEach(paintPane);
+    idle();
     $("forget").onclick = e => { e.preventDefault(); forgetState(); };
-    $("report-open").onclick = openReport;
     $("alertReport").onclick = openReport;
-    $("alertClose").onclick = ()=>{ $("alert").hidden = true; };
+    $("alertClose").onclick = idle;   // back to the calm state; the same error will not re-raise
     $("reportCancel").onclick = ()=>$("report").close();
     $("reportCopy").onclick = async ()=>{
         const t = $("reportWhat").value.trim() + "\n\n" + $("reportBody").textContent;
@@ -557,7 +591,7 @@ function wire(){
     $("shotGrab").onclick = async ()=>{
         $("shotGrab").disabled = true;
         const was = $("shotGrab").textContent;
-        $("shotGrab").textContent = "pick the tab to capture… / 选择标签页…";
+        $("shotGrab").textContent = "pick the tab to capture… / 选择要截的标签页…";
         try{ showShot(await grabShot()); $("shotNote").textContent =
                 "It goes to your clipboard when you press Open on GitHub — paste it into the issue's "
                 + "Screenshot field. / 点「在 GitHub 打开」时放进剪贴板，到 issue 的截图栏粘贴。"; }
