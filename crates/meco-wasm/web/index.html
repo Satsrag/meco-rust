@@ -40,6 +40,9 @@
            color:#555; background:#f3f1ea; border:1px solid var(--bd); border-radius:8px;
            padding:6px 8px; margin-top:6px; white-space:pre-wrap; word-break:break-all; min-height:26px; }
     .tag { color:var(--acc); font-weight:700; }
+    .cu { padding:1px 2px; border-radius:3px; }
+    .cu.sel { background:var(--acc); color:#fff; }
+    .cu.sel .tag { color:#b7e4d6; }
     .err { color:#c0392b; }
     footer { margin-top:14px; font-size:12px; color:var(--mut); }
     footer a { color:var(--acc); text-decoration:none; }
@@ -121,12 +124,33 @@ function forgetState(){
     location.reload();
 }
 
+// One cell per code point, tagged with the UTF-16 range it occupies in the textarea, so selecting
+// text in a box can light up exactly the code points it covers.
 function hex(s){
     if(!s) return "";
-    return Array.from(s).map(ch=>{
-        const cp = ch.codePointAt(0), n = SPECIAL[cp];
-        return `U+${cp.toString(16).toUpperCase().padStart(4,"0")}${n?` <span class="tag">${n}</span>`:""}`;
-    }).join("  ");
+    const cells = []; let i = 0;
+    for(const ch of s){
+        const cp = ch.codePointAt(0), n = SPECIAL[cp], from = i;
+        i += ch.length;
+        cells.push(`<span class="cu" data-a="${from}" data-b="${i}">`
+            + `U+${cp.toString(16).toUpperCase().padStart(4,"0")}`
+            + `${n?` <span class="tag">${n}</span>`:""}</span>`);
+    }
+    return cells.join("  ");
+}
+
+// Light up the code-point cells covered by the current selection in that box.
+function markSel(which){
+    const box = $("box"+which), a = box.selectionStart, b = box.selectionEnd, on = b > a;
+    $("hex"+which).querySelectorAll(".cu").forEach(el=>{
+        el.classList.toggle("sel", on && +el.dataset.a < b && +el.dataset.b > a);
+    });
+}
+function syncSel(){
+    ["L","M","R"].forEach(x=>{
+        if(document.activeElement === $("box"+x)) markSel(x);
+        else $("hex"+x).querySelectorAll(".cu.sel").forEach(el=>el.classList.remove("sel"));
+    });
 }
 function fillSel(sel, def, types){ types.forEach(t=>{
     const o=document.createElement("option"); o.value=t; o.textContent=t;
@@ -215,6 +239,10 @@ function wire(){
     $("boxL").addEventListener("input",()=>deb("L"));
     $("boxM").addEventListener("input",()=>deb("M"));
     $("boxR").addEventListener("input",()=>deb("R"));
+    // `selectionchange` on a textarea is the modern signal; the rest keeps older engines honest.
+    document.addEventListener("selectionchange", syncSel);
+    ["L","M","R"].forEach(x=>["select","mouseup","keyup","focus","blur"].forEach(ev=>
+        $("box"+x).addEventListener(ev, syncSel)));
     $("encL").onchange = ()=>{ applySide("L"); reconvert("L"); };
     $("encR").onchange = ()=>{ applySide("R"); reconvert("R"); };
     document.querySelectorAll(".samples button").forEach(b=>b.onclick=()=>{
