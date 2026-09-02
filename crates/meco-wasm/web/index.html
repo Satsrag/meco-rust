@@ -35,9 +35,6 @@
     .pane.hub .mong { border-color:var(--hub); background:#fffdf5; }
     .pane.ro .mong { background:#f6f5f1; }
     .ro-badge { font-size:11px; color:var(--acc); border:1px solid var(--acc); border-radius:5px; padding:0 4px; }
-    .reconv { font-size:13px; line-height:1; padding:4px 7px; margin-right:auto;
-              border:1px solid var(--bd); border-radius:6px; background:#fff; color:var(--mut); cursor:pointer; }
-    .reconv:hover { color:var(--acc); border-color:var(--acc); }
     .arrow { align-self:center; color:var(--mut); font-size:22px; padding-top:120px; }
     .hex { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; line-height:1.6;
            color:#555; background:#f3f1ea; border:1px solid var(--bd); border-radius:8px;
@@ -54,8 +51,7 @@
     <div class="sub"><b>左栏输入，右栏只读输出</b>，中间是 <b>Zvvnmod</b> 中间码（枢纽，也可直接输入）——
         全部由 Rust 核心编译的 WebAssembly 在浏览器本地完成。
         右栏可选 <b>utn57</b>（UTN #57 / GB/T 25914-2023）；它只作目标，左栏没有这个选项，因为 meco 不能反向解码。
-        切换左右下拉<b>只更换渲染字体</b>，文本原样保留 —— 同一串码点在 Menk / Delehi / UTN&nbsp;#57
-        三种约定下的字形差别可以直接对照；<b>改完下拉要真正按新编码重新转换，点该栏的 ↻</b>。
+        切换任一栏的编码会<b>立即按新编码重新转换</b>并换用该编码的字体。
         <span id="status">加载 WASM…</span></div>
 
     <div class="samples">
@@ -67,7 +63,7 @@
 
     <div class="panes">
         <div class="pane" id="paneL">
-            <div class="cap"><select id="encL"></select><button class="reconv" id="reconvL" title="按当前编码重新转换（本栏 → 中间码 → 另一栏；只读栏则由中间码重算本栏）">↻</button><span><span class="ro-badge" id="badgeL" hidden>只读</span> 左 left</span></div>
+            <div class="cap"><select id="encL"></select><span><span class="ro-badge" id="badgeL" hidden>只读</span> 左 left</span></div>
             <textarea class="mong" id="boxL" placeholder="选编码 / 由中间转入"></textarea>
             <div class="hex" id="hexL"></div>
         </div>
@@ -79,7 +75,7 @@
         </div>
         <div class="arrow" title="单向：中间码 → 右栏">→</div>
         <div class="pane" id="paneR">
-            <div class="cap"><select id="encR"></select><button class="reconv" id="reconvR" title="按当前编码重新转换（本栏 → 中间码 → 另一栏；只读栏则由中间码重算本栏）">↻</button><span><span class="ro-badge" id="badgeR" hidden>只读输出</span> 右 right</span></div>
+            <div class="cap"><select id="encR"></select><span><span class="ro-badge" id="badgeR" hidden>只读输出</span> 右 right</span></div>
             <textarea class="mong" id="boxR" placeholder="选编码 / 由中间转入"></textarea>
             <div class="hex" id="hexR"></div>
         </div>
@@ -161,10 +157,10 @@ function tr(from,to,s,slot){
     catch(e){ errs[slot] = (e && e.message) || String(e); return null; }
 }
 
-// ↻ reruns the conversion for one side in whichever direction that side can go.
-// The left pane holds text meco can decode, so it becomes the source and redrives the hub and the
-// right pane — this is what you want after fixing a selector that was wrong when the text went in.
-// The right pane is output only, so it can only be re-encoded from the hub.
+// Rerun the conversion for one side, in whichever direction that side can go. Changing a selector
+// calls this: picking a new encoding on the left means "re-read what I typed as that encoding", so
+// the left pane becomes the source and redrives the hub and the right pane. The right pane is
+// output only, so a new encoding there just re-encodes it from the hub.
 function reconvert(which){
     if(which !== "R"){ recompute(which); return; }
     errs[which] = null;
@@ -219,12 +215,8 @@ function wire(){
     $("boxL").addEventListener("input",()=>deb("L"));
     $("boxM").addEventListener("input",()=>deb("M"));
     $("boxR").addEventListener("input",()=>deb("R"));
-    // Changing a side only reswaps that pane's font: the same code points render differently under
-    // the Menk / Delehi / UTN #57 conventions, and that comparison is the point. ↻ recomputes.
-    $("encL").onchange = ()=>{ applySide("L"); saveState(); };
-    $("encR").onchange = ()=>{ applySide("R"); saveState(); };
-    $("reconvL").onclick = ()=>reconvert("L");
-    $("reconvR").onclick = ()=>reconvert("R");
+    $("encL").onchange = ()=>{ applySide("L"); reconvert("L"); };
+    $("encR").onchange = ()=>{ applySide("R"); reconvert("R"); };
     document.querySelectorAll(".samples button").forEach(b=>b.onclick=()=>{
         // samples are standard Unicode (delehi); drive via the hub
         const zv = tr("delehi","zvvnmod", b.getAttribute("data-s"), "M");
