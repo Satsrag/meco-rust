@@ -51,9 +51,9 @@
 </head>
 <body>
     <h1>meco · WASM 三栏转换</h1>
-    <div class="sub">中间是 <b>Zvvnmod</b> 中间码（枢纽），两边各选一种编码，输入任一框即时互转 ——
+    <div class="sub"><b>左栏输入，右栏只读输出</b>，中间是 <b>Zvvnmod</b> 中间码（枢纽，也可直接输入）——
         全部由 Rust 核心编译的 WebAssembly 在浏览器本地完成。
-        <b>utn57</b> 是只读输出（UTN #57 / GB/T 25914-2023，暂不支持反向解码）。
+        右栏可选 <b>utn57</b>（UTN #57 / GB/T 25914-2023）；它只作目标，左栏没有这个选项，因为 meco 不能反向解码。
         切换左右下拉<b>只更换渲染字体</b>，文本原样保留 —— 同一串码点在 Menk / Delehi / UTN&nbsp;#57
         三种约定下的字形差别可以直接对照；<b>改完下拉要真正按新编码重新转换，点该栏的 ↻</b>。
         <span id="status">加载 WASM…</span></div>
@@ -77,9 +77,9 @@
             <textarea class="mong" id="boxM" placeholder="Zvvnmod 中间码"></textarea>
             <div class="hex" id="hexM"></div>
         </div>
-        <div class="arrow">⇄</div>
+        <div class="arrow" title="单向：中间码 → 右栏">→</div>
         <div class="pane" id="paneR">
-            <div class="cap"><select id="encR"></select><button class="reconv" id="reconvR" title="按当前编码重新转换（本栏 → 中间码 → 另一栏；只读栏则由中间码重算本栏）">↻</button><span><span class="ro-badge" id="badgeR" hidden>只读</span> 右 right</span></div>
+            <div class="cap"><select id="encR"></select><button class="reconv" id="reconvR" title="按当前编码重新转换（本栏 → 中间码 → 另一栏；只读栏则由中间码重算本栏）">↻</button><span><span class="ro-badge" id="badgeR" hidden>只读输出</span> 右 right</span></div>
             <textarea class="mong" id="boxR" placeholder="选编码 / 由中间转入"></textarea>
             <div class="hex" id="hexR"></div>
         </div>
@@ -93,6 +93,7 @@ import init, { translate, version } from "./pkg/meco_wasm.js";
 
 const SIDE_TYPES = ["z52", "menk_shape", "menk_letter", "delehi", "utn57"]; // oyun still deferred
 const OUTPUT_ONLY = new Set(["utn57"]); // meco can encode these, not decode them
+const SOURCE_TYPES = SIDE_TYPES.filter(t=>!OUTPUT_ONLY.has(t)); // the left pane must be decodable
 const FONTS = {
     zvvnmod:"'zvvn mod'", delehi:"'delehi'", menk_letter:"'menk letter'",
     menk_shape:"'menk shape'", z52:"'z52'", utn57:"'utn57'",
@@ -131,18 +132,18 @@ function hex(s){
         return `U+${cp.toString(16).toUpperCase().padStart(4,"0")}${n?` <span class="tag">${n}</span>`:""}`;
     }).join("  ");
 }
-function fillSel(sel, def){ SIDE_TYPES.forEach(t=>{
-    const o=document.createElement("option"); o.value=t;
-    o.textContent = OUTPUT_ONLY.has(t) ? t+" （只读 output-only）" : t;
+function fillSel(sel, def, types){ types.forEach(t=>{
+    const o=document.createElement("option"); o.value=t; o.textContent=t;
     if(t===def) o.selected=true; sel.appendChild(o);
 }); }
 function encOf(which){ return which==="M" ? "zvvnmod" : (which==="L" ? $("encL").value : $("encR").value); }
-// A side pane whose encoding is output-only cannot be typed into: meco has no decoder for it.
+// Left is the input side, right is output. Only the left selector is restricted to encodings meco
+// can decode; the right may name any target, utn57 included.
 function applySide(which){
-    const enc = $("enc"+which).value, box = $("box"+which), ro = OUTPUT_ONLY.has(enc);
-    box.style.fontFamily = FONTS[enc]+FALLBACK;
+    const box = $("box"+which), ro = which === "R";
+    box.style.fontFamily = FONTS[$("enc"+which).value]+FALLBACK;
     box.readOnly = ro;
-    box.placeholder = ro ? "只读输出 / output only" : "选编码 / 由中间转入";
+    box.placeholder = ro ? "只读输出 / output only" : "在此输入 / type here";
     $("pane"+which).classList.toggle("ro", ro);
     $("badge"+which).hidden = !ro;
 }
@@ -161,11 +162,11 @@ function tr(from,to,s,slot){
 }
 
 // ↻ reruns the conversion for one side in whichever direction that side can go.
-// A normal pane holds text meco can decode, so it becomes the source and redrives the hub and the
-// far pane — this is what you want after fixing a selector that was wrong when the text went in.
-// An output-only pane has no decoder, so it can only be re-encoded from the hub.
+// The left pane holds text meco can decode, so it becomes the source and redrives the hub and the
+// right pane — this is what you want after fixing a selector that was wrong when the text went in.
+// The right pane is output only, so it can only be re-encoded from the hub.
 function reconvert(which){
-    if(!OUTPUT_ONLY.has(encOf(which))){ recompute(which); return; }
+    if(which !== "R"){ recompute(which); return; }
     errs[which] = null;
     const out = tr("zvvnmod", encOf(which), $("boxM").value, which);
     $("box"+which).value = out===null ? "" : out;
@@ -204,8 +205,8 @@ function recompute(src){
 function wire(){
     const st = loadState();
     const pick = (v,def) => SIDE_TYPES.includes(v) ? v : def;
-    fillSel($("encL"), pick(st && st.encL, "z52"));
-    fillSel($("encR"), pick(st && st.encR, "menk_shape"));
+    fillSel($("encL"), SOURCE_TYPES.includes(st && st.encL) ? st.encL : "z52", SOURCE_TYPES);
+    fillSel($("encR"), pick(st && st.encR, "menk_shape"), SIDE_TYPES);
     applyFonts();
     if(st){ // restore text verbatim: re-running the conversion could rewrite what you left here
         ["L","M","R"].forEach(x=>{
