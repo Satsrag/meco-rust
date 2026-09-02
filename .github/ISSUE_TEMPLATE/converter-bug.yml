@@ -1,31 +1,32 @@
-name: 转换问题 / Conversion bug
-description: 某个词转换结果不对、报错，或者两种编码之间对不上。/ A word converts wrongly, errors out, or two encodings disagree.
+name: Conversion bug / 转换问题
+description: A word converts wrongly, errors out, or two encodings disagree. / 某个词转换结果不对、报错，或者两种编码之间对不上。
 title: "[convert] "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        大部分字段可以由 [在线转换器](https://www.satsrag.dev/convert/) 的「报个问题」按钮自动填好 ——
-        在页面上点它，会带着码点序列跳到这里。手工填也可以，**码点序列比截图有用得多**。
+        Most fields are prefilled by the **Report** button in the
+        [online converter](https://www.satsrag.dev/convert/) — click it there and it brings the
+        code-point sequences here. Filling them by hand is fine too; code-point sequences are far
+        more useful than prose.
 
-        Most fields are prefilled by the **报个问题 / Report** button in the
-        [online converter](https://www.satsrag.dev/convert/). Filling them by hand is fine too —
-        code-point sequences are far more useful than a screenshot.
+        大部分字段可以由[在线转换器](https://www.satsrag.dev/convert/)的「报个问题」按钮自动填好 ——
+        在页面上点它，会带着码点序列跳到这里。手工填也可以，**码点序列比描述有用得多**。
 
   - type: textarea
     id: what
     attributes:
-      label: 出了什么问题 / What went wrong
-      description: 一两句话就够。/ A sentence or two is enough.
-      placeholder: ᠰᠠᠶᠢᠨ 从 delehi 转 utn57，尾字母应该是 ᠨ，实际给了 ᠠ + FVS2。
+      label: What went wrong / 出了什么问题
+      description: A sentence or two is enough. / 一两句话就够。
+      placeholder: Converting ᠰᠠᠶᠢᠨ from delehi to utn57, the final letter should be ᠨ but comes out as ᠠ + FVS2.
     validations:
       required: true
 
   - type: input
     id: from-encoding
     attributes:
-      label: 源编码 / Source encoding
+      label: Source encoding / 源编码
       placeholder: delehi
     validations:
       required: true
@@ -33,31 +34,39 @@ body:
   - type: input
     id: to-encoding
     attributes:
-      label: 目标编码 / Target encoding
+      label: Target encoding / 目标编码
       placeholder: utn57
     validations:
       required: true
 
   - type: textarea
-    id: input-codepoints
+    id: input
     attributes:
-      label: 输入码点 / Input code points
-      description: 形如 `U+1830 U+1820 U+180D …`。转换器页面每个框下方那一行就是。
+      label: Input / 输入
+      description: |
+        The text and its code points, one line each. The text can be pasted straight back into the
+        converter to reproduce; the code points disambiguate it.
+        原文和码点各一行。原文可以直接粘回转换器复现，码点用来消歧。
       render: text
+      placeholder: |
+        text: ᠰᠠᠶᠢᠨ
+        code: U+1830 U+1820 U+180D U+1822 U+180D U+1822 U+1828
     validations:
       required: true
 
   - type: textarea
-    id: hub-codepoints
+    id: hub
     attributes:
-      label: 中间码（zvvnmod）码点 / Hub code points
-      description: 转换是 源 → zvvnmod → 目标，中间这一步往往能指出问题出在哪一半。
+      label: Hub / 中间码 zvvnmod
+      description: |
+        Conversion runs source → zvvnmod → target, so this middle value usually says which half is
+        at fault. / 转换是 源 → zvvnmod → 目标，中间这一步往往能指出问题出在哪一半。
       render: text
 
   - type: textarea
-    id: actual-codepoints
+    id: actual
     attributes:
-      label: 实际输出码点 / Actual output code points
+      label: Actual output / 实际输出
       render: text
     validations:
       required: true
@@ -65,22 +74,35 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: 期望输出 / Expected output
-      description: 码点序列最好；写清楚“应该显示成什么字形”也行。
+      label: Expected output / 期望输出
+      description: |
+        Code points are best; saying what shape it should render as also works.
+        码点序列最好；写清楚「应该显示成什么字形」也行。
       render: text
 
   - type: textarea
     id: meco-error
     attributes:
-      label: meco 报的错 / Error from meco
-      description: 有的话贴原文；没报错就留空。
+      label: Error from meco / meco 报的错
+      description: Paste it verbatim if there was one; leave empty otherwise. / 有的话贴原文；没报错就留空。
       render: text
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot / 截图
+      description: |
+        For a shaping problem a picture beats any description. The converter's **Report** button puts
+        a screenshot on your clipboard — paste it here with Cmd/Ctrl+V and GitHub uploads it.
+        字形不对的问题，一张图胜过描述。转换器的「报个问题」会把截图放进剪贴板 ——
+        在这个框里按 Cmd/Ctrl+V 粘贴，GitHub 会自动上传。
+      placeholder: paste a screenshot here / 在此粘贴截图
 
   - type: textarea
     id: environment
     attributes:
-      label: 环境 / Environment
-      description: meco-core 版本、浏览器或 CLI、字体加载情况。
+      label: Environment / 环境
+      description: meco-core version, browser or CLI, whether the fonts loaded. / meco-core 版本、浏览器或 CLI、字体加载情况。
       render: text
       placeholder: |
         core: 0.3.1 (wasm)
@@ -91,9 +113,9 @@ body:
   - type: checkboxes
     id: checks
     attributes:
-      label: 提交前 / Before submitting
+      label: Before submitting / 提交前
       options:
-        - label: 我确认过输入文本确实是所选源编码（转换器里越界字符会标红）。/ I checked the input really is in the selected source encoding — the converter reds out characters that are not.
+        - label: I checked the input really is in the selected source encoding — the converter reds out characters that are not. / 我确认过输入文本确实是所选源编码（转换器里越界字符会标红）。
           required: true
-        - label: 上面的内容我看过，不包含我不愿公开的文字。/ I have read the content above and it contains nothing I mind publishing.
+        - label: I have read the content above and it contains nothing I mind publishing. / 上面的内容我看过，不包含我不愿公开的文字。
           required: true
