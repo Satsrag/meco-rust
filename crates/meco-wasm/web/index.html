@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>meco · WASM 三栏转换 (Zvvnmod 枢纽)</title>
+<title>Mongolian encoding converter / 蒙古语编码转换</title>
 <style>
     /* per-encoding fonts (copied from meco static/fonts; utn57 = Noto Sans Mongolian 3.002) */
     @font-face { font-family:"delehi";      src:url("fonts/delehi.ttf")       format("truetype"); }
@@ -24,6 +24,8 @@
     h1, .sub, footer { flex:0 0 auto; }
     h1 { font-size:17px; margin:0 0 4px; }
     .sub { font-size:12px; color:var(--mut); margin-bottom:10px; }
+    .sub .zh, .zh { display:block; margin-top:3px; }
+    .h1zh { font-weight:400; color:var(--mut); }
     #status { font-weight:700; }
 
     /* One grid for all three panes, so the caption / box / code-point rows line up across them no
@@ -95,7 +97,15 @@
     #report label { display:block; font-size:12px; color:var(--mut); margin-bottom:4px; }
     #reportWhat { width:100%; font:inherit; font-size:13px; padding:6px 8px; margin-bottom:12px;
                   border:1px solid var(--bd); border-radius:6px; background:#fff; resize:vertical; }
-    #reportBody { max-height:38vh; overflow:auto; margin:0 0 14px;
+    .shot { margin-bottom:12px; font-size:12px; color:var(--mut); line-height:1.6; }
+    .shot button { font:inherit; font-size:12px; padding:3px 9px; margin-right:6px; cursor:pointer;
+                   border:1px solid var(--bd); border-radius:6px; background:#fff; }
+    .shot #shotNote { display:block; margin-top:6px; }
+    #shotPreview { display:block; max-width:100%; max-height:22vh; margin-top:8px;
+                   border:1px solid var(--bd); border-radius:8px; }
+    /* an explicit display: beats the UA's [hidden] rule, so restate it */
+    #shotPreview[hidden], .shot button[hidden] { display:none; }
+    #reportBody { max-height:30vh; overflow:auto; margin:0 0 14px;
                   font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; line-height:1.6;
                   color:#555; background:#f3f1ea; border:1px solid var(--bd); border-radius:8px;
                   padding:8px 10px; white-space:pre-wrap; word-break:break-all; }
@@ -109,58 +119,73 @@
 </style>
 </head>
 <body>
-    <h1>meco · WASM 三栏转换</h1>
-    <div class="sub"><b>左栏输入，右栏只读输出</b>，中间是 <b>Zvvnmod</b> 中间码（枢纽，也可直接输入）——
-        全部由 Rust 核心编译的 WebAssembly 在浏览器本地完成。
-        <b>utn57</b> 只作右栏目标，左栏没有这个选项，因为 meco 不能反向解码；下拉里的国标编号悬停可看说明。
-        切换任一栏的编码会<b>立即按新编码重新转换</b>并换用该编码的字体；
-        不属于该栏编码的字符<b class="err">标红</b>（文字和下方码点同时标）。
-        <span id="status">加载 WASM…</span></div>
+    <h1>Mongolian encoding converter <span class="h1zh">蒙古语编码转换</span></h1>
+    <div class="sub">
+        Type on the left, read the output on the right; the middle pane is the <b>Zvvnmod</b> hub and
+        takes input too. Everything runs locally, in WebAssembly built from the Rust core.
+        <b>utn57</b> is a target only — meco has no decoder for it. Changing an encoding reconverts at
+        once and switches to that encoding's font; characters that do not belong to a pane's encoding
+        are <b class="err">marked red</b>, in the text and in the code points under it.
+        <span class="zh">左栏输入，右栏只读输出，中间是 <b>Zvvnmod</b> 中间码（也可直接输入）；全部由 Rust
+        核心编译的 WebAssembly 在浏览器本地完成。<b>utn57</b> 只作目标，meco 不能反向解码。切换编码会立即
+        重新转换并换用该编码的字体；不属于该栏编码的字符<b class="err">标红</b>（文字和码点同时）。</span>
+        <span id="status">loading WASM… / 加载中…</span></div>
 
     <div class="panes">
         <div class="pane" id="paneL">
-            <div class="cap"><select id="encL"></select><span><span class="ro-badge" id="badgeL" hidden>只读</span> 左 left</span></div>
+            <div class="cap"><select id="encL"></select><span><span class="ro-badge" id="badgeL" hidden>read-only</span> Left / 左</span></div>
             <div class="mongwrap" id="wrapL"><div class="mong bd" id="bdL" aria-hidden="true"></div><textarea class="mong" id="boxL" placeholder="选编码 / 由中间转入"></textarea></div>
             <div class="hex" id="hexL"></div>
         </div>
         <div class="arrow" id="arrow1">⇄</div>
         <div class="pane hub" id="paneM">
-            <div class="cap"><span>zvvnmod · 中间码 hub</span></div>
+            <div class="cap"><span>zvvnmod · hub / 中间码</span></div>
             <div class="mongwrap" id="wrapM"><div class="mong bd" id="bdM" aria-hidden="true"></div><textarea class="mong" id="boxM" placeholder="Zvvnmod 中间码"></textarea></div>
             <div class="hex" id="hexM"></div>
         </div>
-        <div class="arrow" id="arrow2" title="单向：中间码 → 右栏">→</div>
+        <div class="arrow" id="arrow2" title="one-way: hub → right / 单向：中间码 → 右栏">→</div>
         <div class="pane" id="paneR">
-            <div class="cap"><select id="encR"></select><span><span class="ro-badge" id="badgeR" hidden>只读输出</span> 右 right</span></div>
+            <div class="cap"><select id="encR"></select><span><span class="ro-badge" id="badgeR" hidden>read-only</span> Right / 右</span></div>
             <div class="mongwrap" id="wrapR"><div class="mong bd" id="bdR" aria-hidden="true"></div><textarea class="mong" id="boxR" placeholder="选编码 / 由中间转入"></textarea></div>
             <div class="hex" id="hexR"></div>
         </div>
     </div>
 
-    <footer><a href="../">← 其他工具 / other tools</a> · <a href="https://github.com/Satsrag/meco-rust">Satsrag/meco-rust</a>
-        · <button type="button" class="linkbtn" id="report-open">报个问题 / report</button>
-        · <a href="#" id="forget" title="清空本浏览器记住的编码选择和文本">清除本地记忆</a></footer>
+    <footer><a href="../">← other tools / 其他工具</a> · <a href="https://github.com/Satsrag/meco-rust">Satsrag/meco-rust</a>
+        · <button type="button" class="linkbtn" id="report-open">Report a problem / 报个问题</button>
+        · <a href="#" id="forget" title="clear the encodings and text this browser remembers / 清空本浏览器记住的编码选择和文本">forget local memory / 清除本地记忆</a></footer>
 
     <div id="alert" hidden>
         <span id="alertMsg"></span>
-        <button type="button" id="alertReport">报个问题</button>
-        <button type="button" id="alertClose" aria-label="关闭">×</button>
+        <button type="button" id="alertReport">Report / 报个问题</button>
+        <button type="button" id="alertClose" aria-label="dismiss / 关闭">×</button>
     </div>
 
     <dialog id="report">
         <div class="rp">
-            <h2>报个问题 / Report a problem</h2>
-            <p>下面是<b>将要提交的全部内容</b>，此外不会发送任何东西。<b>在 GitHub 打开</b>会在新标签打开预填好的
-                issue 表单，内容在那里还能改，最后由你自己按提交；<b>用 Copilot 起草</b>则把提示词和这些数据
-                拷到剪贴板并打开 Copilot，粘贴后由它写描述。</p>
-            <label for="reportWhat">出了什么问题？（可留空，也可以到 GitHub 上再写）</label>
-            <textarea id="reportWhat" rows="2" placeholder="例：ᠰᠠᠶᠢᠨ 转 utn57，尾字母应该是 ᠨ"></textarea>
+            <h2>Report a problem / 报个问题</h2>
+            <p>Below is <b>everything that will be submitted</b>; nothing else leaves this page.
+                <b>Open on GitHub</b> opens a prefilled issue form in a new tab — you can still edit it
+                there, and you press submit yourself. <b>Draft with Copilot</b> instead puts a prompt
+                and this data on your clipboard and opens Copilot to paste into.
+                <span class="zh">下面是<b>将要提交的全部内容</b>，此外不会发送任何东西。「在 GitHub 打开」
+                会在新标签打开预填好的 issue 表单，内容还能改，最后由你自己按提交；「用 Copilot 起草」则把
+                提示词和这些数据拷到剪贴板并打开 Copilot。</span></p>
+            <label for="reportWhat">What went wrong? Optional — you can also write it on GitHub. / 出了什么问题？可留空。</label>
+            <textarea id="reportWhat" rows="2" placeholder="e.g. ᠰᠠᠶᠢᠨ to utn57, the final letter should be ᠨ / 例：尾字母应该是 ᠨ"></textarea>
+            <div class="shot">
+                <button type="button" id="shotGrab">Add a screenshot / 加一张截图</button>
+                <button type="button" id="shotDrop" hidden>Remove / 移除</button>
+                <button type="button" id="shotSave" hidden>Download PNG / 下载 PNG</button>
+                <span id="shotNote">A GitHub link cannot carry an image, so the screenshot goes to your clipboard — paste it into the issue. / GitHub 的链接塞不进图片，所以截图放进剪贴板，你在 issue 里粘贴即可。</span>
+                <img id="shotPreview" alt="截图预览" hidden>
+            </div>
             <pre id="reportBody"></pre>
             <menu>
-                <button type="button" id="reportCancel">取消</button>
-                <button type="button" id="reportCopy">复制</button>
-                <button type="button" id="reportAI" title="拷贝提示词+数据并打开 Copilot，粘贴即可让它起草">用 Copilot 起草</button>
-                <button type="button" id="reportGo">在 GitHub 打开</button>
+                <button type="button" id="reportCancel">Cancel / 取消</button>
+                <button type="button" id="reportCopy">Copy / 复制</button>
+                <button type="button" id="reportAI" title="copies a prompt plus this data and opens Copilot to paste into / 拷贝提示词和数据并打开 Copilot">Draft with Copilot / 用 Copilot 起草</button>
+                <button type="button" id="reportGo">Open on GitHub / 在 GitHub 打开</button>
             </menu>
         </div>
     </dialog>
@@ -177,9 +202,13 @@ const TARGET_TYPES = [...OUTPUT_ONLY, ...SOURCE_TYPES];        // utn57 leads th
 // codes with no standard behind them, so they stay bare.
 const STD = { delehi:"GB/T 25914-2010", menk_letter:"GB/T 25914-2010", utn57:"GB/T 25914-2023" };
 const STD_NOTE = {
-    delehi:      "德力海国际编码 · 以 GB/T 25914-2010 为基础的自定解释，FVS 为绝对语义",
-    menk_letter: "蒙科立国际标准编码 · GB/T 25914-2010 附录 A 的字面实现，FVS 为相对语义",
-    utn57:       "GB/T 25914-2023 / UTN #57 rev.4 · 绝对语义，新增 FVS4 U+180F",
+    delehi:      "Delehi international encoding · its own reading of GB/T 25914-2010, absolute FVS "
+               + "semantics / 德力海国际编码，以 2010 国标为基础的自定解释，FVS 绝对语义",
+    menk_letter: "Menksoft international standard encoding · the literal implementation of GB/T "
+               + "25914-2010 appendix A, relative FVS semantics / 蒙科立国际标准编码，2010 国标附录 A 的"
+               + "字面实现，FVS 相对语义",
+    utn57:       "GB/T 25914-2023 / UTN #57 rev.4 · absolute semantics, adds FVS4 U+180F / "
+               + "绝对语义，新增 FVS4 U+180F",
 };
 const FONTS = {
     zvvnmod:"'zvvn mod'", delehi:"'delehi'", menk_letter:"'menk letter'",
@@ -307,7 +336,7 @@ function applySide(which){
     const box = $("box"+which), ro = which === "R";
     $("wrap"+which).style.fontFamily = FONTS[$("enc"+which).value]+FALLBACK;
     box.readOnly = ro;
-    box.placeholder = ro ? "只读输出 / output only" : "在此输入 / type here";
+    box.placeholder = ro ? "output only / 只读输出" : "type here / 在此输入";
     $("pane"+which).classList.toggle("ro", ro);
     $("badge"+which).hidden = !ro;
 }
@@ -349,7 +378,7 @@ function recompute(src){
     let zv = src==="M" ? val : tr(srcEnc,"zvvnmod",val,src);
     const fail = (x,msg)=>{ $("hex"+x).innerHTML = `<span class="err">${msg}</span>`; };
     if(zv===null){ // source failed to decode
-        ["L","M","R"].filter(x=>x!==src).forEach(x=>{ $("box"+x).value=""; paintPane(x); fail(x,"转换错误 / unsupported"); });
+        ["L","M","R"].filter(x=>x!==src).forEach(x=>{ $("box"+x).value=""; paintPane(x); fail(x,"conversion failed / 转换错误"); });
         paintPane(src);
         return;
     }
@@ -373,16 +402,24 @@ function recompute(src){
 const ISSUE_NEW = "https://github.com/Satsrag/meco-rust/issues/new";
 const clip = (t,n)=> t.length > n ? t.slice(0,n) + ` … (截断，共 ${t.length} 字符)` : t;
 
-function diagnostics(){
-    const cps = t => Array.from(t||"").map(c =>
+// Each pane contributes both forms: the raw text, which can be pasted straight back into the
+// converter to reproduce, and the code points, which say unambiguously what that text is when the
+// glyphs are PUA or the difference is an invisible FVS.
+function paneField(which){
+    const t = $("box"+which).value;
+    const cps = Array.from(t).map(c =>
         "U+" + c.codePointAt(0).toString(16).toUpperCase().padStart(4,"0")).join(" ");
+    return `text: ${clip(t, 300) || "(空)"}\ncode: ${clip(cps, 900) || "(空)"}`;
+}
+function diagnostics(){
     return {
         "from-encoding": encOf("L"),
         "to-encoding": encOf("R"),
-        "input-codepoints":  clip(cps($("boxL").value), 900),
-        "hub-codepoints":    clip(cps($("boxM").value), 900),
-        "actual-codepoints": clip(cps($("boxR").value), 900),
+        "input":  paneField("L"),
+        "hub":    paneField("M"),
+        "actual": paneField("R"),
         "meco-error": errs.L || errs.M || errs.R || "",
+        "screenshot": "",   // filled in by pasting; the URL cannot carry an image
         "environment": [
             `core: ${CORE} (wasm)`,
             `page: ${location.href}`,
@@ -392,10 +429,9 @@ function diagnostics(){
     };
 }
 const LABEL = {
-    "from-encoding":"源编码 / from", "to-encoding":"目标编码 / to",
-    "input-codepoints":"输入码点 / input", "hub-codepoints":"中间码 zvvnmod / hub",
-    "actual-codepoints":"实际输出 / actual", "meco-error":"meco 报错 / error",
-    "environment":"环境 / environment",
+    "from-encoding":"Source encoding / 源编码", "to-encoding":"Target encoding / 目标编码",
+    "input":"Input / 输入", "hub":"Hub / 中间码 zvvnmod", "actual":"Actual output / 实际输出",
+    "meco-error":"Error from meco / meco 报错", "environment":"Environment / 环境",
 };
 const reportText = d => Object.entries(d)
     .map(([k,v]) => `${k}:\n${(v||"(空)").split("\n").map(l=>"  "+l).join("\n")}`).join("\n\n");
@@ -406,14 +442,17 @@ const reportText = d => Object.entries(d)
 function issueBody(d, what){
     const block = k => "```\n" + (d[k] || "(空)") + "\n```";
     return [
-        "### 出了什么问题 / What went wrong", "", what || "_(待补充)_", "",
+        "### What went wrong / 出了什么问题", "", what || "_(to be filled in / 待补充)_", "",
         `### ${LABEL["from-encoding"]}`, "", "`"+d["from-encoding"]+"`", "",
         `### ${LABEL["to-encoding"]}`, "", "`"+d["to-encoding"]+"`", "",
-        `### ${LABEL["input-codepoints"]}`, "", block("input-codepoints"), "",
-        `### ${LABEL["hub-codepoints"]}`, "", block("hub-codepoints"), "",
-        `### ${LABEL["actual-codepoints"]}`, "", block("actual-codepoints"), "",
-        "### 期望输出 / Expected", "", "_(待补充)_", "",
+        `### ${LABEL["input"]}`, "", block("input"), "",
+        `### ${LABEL["hub"]}`, "", block("hub"), "",
+        `### ${LABEL["actual"]}`, "", block("actual"), "",
+        "### Expected output / 期望输出", "", "_(to be filled in / 待补充)_", "",
         `### ${LABEL["meco-error"]}`, "", block("meco-error"), "",
+        "### Screenshot / 截图", "",
+        shot ? "_(on your clipboard — paste it here with Cmd/Ctrl+V / 截图已复制到剪贴板，在这一行粘贴)_"
+             : "_(none / 无)_", "",
         `### ${LABEL["environment"]}`, "", block("environment"), "",
     ].join("\n");
 }
@@ -438,9 +477,45 @@ const aiPrompt = (d, what) => [
     what ? `\n用户的说明：${what}` : "",
     "\n" + reportText(d),
 ].join("\n");
+// GitHub's prefilled-issue URL carries text only, so a screenshot travels via the clipboard and is
+// pasted into the issue body, where GitHub uploads it. Frames come from getDisplayMedia — real
+// rendered pixels, fonts and vertical layout included, which a DOM-to-canvas library would not get
+// right for a transparent textarea over a backdrop in `writing-mode: vertical-lr`.
+let shot = null; // Blob
+const canShoot = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+
+async function grabShot(){
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "browser" }, audio: false, preferCurrentTab: true });
+    try{
+        const video = Object.assign(document.createElement("video"), { srcObject: stream, muted: true });
+        await video.play();
+        await new Promise(r => requestAnimationFrame(()=>requestAnimationFrame(r))); // let a frame land
+        const c = Object.assign(document.createElement("canvas"),
+                                { width: video.videoWidth, height: video.videoHeight });
+        c.getContext("2d").drawImage(video, 0, 0);
+        return await new Promise(r => c.toBlob(r, "image/png"));
+    } finally { stream.getTracks().forEach(t=>t.stop()); }
+}
+function showShot(blob){
+    shot = blob;
+    $("shotPreview").hidden = !blob;
+    $("shotDrop").hidden = $("shotSave").hidden = !blob;
+    $("shotGrab").textContent = blob ? "Retake / 重新截图" : "Add a screenshot / 加一张截图";
+    if(blob) $("shotPreview").src = URL.createObjectURL(blob);
+}
+async function shotToClipboard(){
+    if(!shot || !window.ClipboardItem) return false;
+    try{ await navigator.clipboard.write([new ClipboardItem({ "image/png": shot })]); return true; }
+    catch(e){ return false; }
+}
+
 function openReport(){
     const d = diagnostics();
     $("reportWhat").value = "";
+    showShot(null);
+    $("shotGrab").hidden = !canShoot;
+    if(!canShoot) $("shotNote").textContent = "This browser cannot capture the page; take a screenshot yourself and paste it into the issue. / 此浏览器不支持抓帧，自己截图后粘贴即可。";
     $("reportBody").textContent = reportText(d);
     $("report").dataset.payload = JSON.stringify(d);
     $("report").showModal();
@@ -454,7 +529,7 @@ function updateAlert(){
     if(!err){ $("alert").hidden = true; shown = null; return; }
     if(err === shown) return;              // same failure, already offered or dismissed
     shown = err;
-    $("alertMsg").textContent = "转换报错：" + err;
+    $("alertMsg").textContent = "Conversion failed / 转换报错: " + err;
     $("alert").hidden = false;
 }
 
@@ -475,9 +550,27 @@ function wire(){
     $("reportCancel").onclick = ()=>$("report").close();
     $("reportCopy").onclick = async ()=>{
         const t = $("reportWhat").value.trim() + "\n\n" + $("reportBody").textContent;
-        try{ await navigator.clipboard.writeText(t.trim()); $("reportCopy").textContent = "已复制 ✓"; }
-        catch(e){ $("reportCopy").textContent = "复制失败"; }
-        setTimeout(()=>{ $("reportCopy").textContent = "复制"; }, 1600);
+        try{ await navigator.clipboard.writeText(t.trim()); $("reportCopy").textContent = "Copied ✓ / 已复制"; }
+        catch(e){ $("reportCopy").textContent = "Copy failed / 复制失败"; }
+        setTimeout(()=>{ $("reportCopy").textContent = "Copy / 复制"; }, 1600);
+    };
+    $("shotGrab").onclick = async ()=>{
+        $("shotGrab").disabled = true;
+        const was = $("shotGrab").textContent;
+        $("shotGrab").textContent = "pick the tab to capture… / 选择标签页…";
+        try{ showShot(await grabShot()); $("shotNote").textContent =
+                "It goes to your clipboard when you press Open on GitHub — paste it into the issue's "
+                + "Screenshot field. / 点「在 GitHub 打开」时放进剪贴板，到 issue 的截图栏粘贴。"; }
+        catch(e){ $("shotNote").textContent = "No capture (cancelled?) / 没有截成: " + (e.message || e);
+                  showShot(null); }
+        finally { $("shotGrab").disabled = false;
+                  if($("shotGrab").textContent.startsWith("pick the tab")) $("shotGrab").textContent = was; }
+    };
+    $("shotDrop").onclick = ()=>showShot(null);
+    $("shotSave").onclick = ()=>{
+        const a = Object.assign(document.createElement("a"),
+            { href: URL.createObjectURL(shot), download: "meco-convert.png" });
+        a.click(); URL.revokeObjectURL(a.href);
     };
     $("reportAI").onclick = async ()=>{
         const d = JSON.parse($("report").dataset.payload);
@@ -486,12 +579,16 @@ function wire(){
             window.open(COPILOT, "_blank", "noopener");
             $("report").close();
         }catch(e){
-            $("reportAI").textContent = "复制失败，请用「复制」";
-            setTimeout(()=>{ $("reportAI").textContent = "用 Copilot 起草"; }, 2200);
+            $("reportAI").textContent = "Copy failed — use Copy / 复制失败";
+            setTimeout(()=>{ $("reportAI").textContent = "Draft with Copilot / 用 Copilot 起草"; }, 2200);
         }
     };
-    $("reportGo").onclick = ()=>{
+    $("reportGo").onclick = async ()=>{
         const d = JSON.parse($("report").dataset.payload);
+        if(shot && !await shotToClipboard()){
+            $("shotNote").textContent = "The browser would not put an image on the clipboard — use Download PNG and drag the file into the issue. / 剪贴板放不下图片，请点「下载 PNG」再拖进 issue。";
+            return;                                  // don't navigate away from the only copy
+        }
         window.open(issueUrl(d, $("reportWhat").value.trim()), "_blank", "noopener");
         $("report").close();
     };
@@ -513,9 +610,9 @@ function wire(){
 
 init().then(()=>{
     CORE = version();
-    $("status").textContent = "WASM 就绪 ✓  core v"+CORE;
+    $("status").textContent = "WASM ready ✓ / 就绪  core v"+CORE;
     wire();
-}).catch(e=>{ $("status").innerHTML = `<span class="err">WASM 加载失败: ${e}</span>`; });
+}).catch(e=>{ $("status").innerHTML = `<span class="err">WASM failed to load / 加载失败: ${e}</span>`; });
 </script>
 </body>
 </html>
