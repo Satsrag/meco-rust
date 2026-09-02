@@ -55,7 +55,7 @@
         全部由 Rust 核心编译的 WebAssembly 在浏览器本地完成。
         <b>utn57</b> 是只读输出（UTN #57 / GB/T 25914-2023，暂不支持反向解码）。
         切换左右下拉<b>只更换渲染字体</b>，文本原样保留 —— 同一串码点在 Menk / Delehi / UTN&nbsp;#57
-        三种约定下的字形差别可以直接对照；要按新编码重算文本，点该栏的 <b>↻</b>。
+        三种约定下的字形差别可以直接对照；<b>改完下拉要真正按新编码重新转换，点该栏的 ↻</b>。
         <span id="status">加载 WASM…</span></div>
 
     <div class="samples">
@@ -67,7 +67,7 @@
 
     <div class="panes">
         <div class="pane" id="paneL">
-            <div class="cap"><select id="encL"></select><button class="reconv" id="reconvL" title="按当前编码从中间码重新转换">↻</button><span><span class="ro-badge" id="badgeL" hidden>只读</span> 左 left</span></div>
+            <div class="cap"><select id="encL"></select><button class="reconv" id="reconvL" title="按当前编码重新转换（本栏 → 中间码 → 另一栏；只读栏则由中间码重算本栏）">↻</button><span><span class="ro-badge" id="badgeL" hidden>只读</span> 左 left</span></div>
             <textarea class="mong" id="boxL" placeholder="选编码 / 由中间转入"></textarea>
             <div class="hex" id="hexL"></div>
         </div>
@@ -79,13 +79,14 @@
         </div>
         <div class="arrow">⇄</div>
         <div class="pane" id="paneR">
-            <div class="cap"><select id="encR"></select><button class="reconv" id="reconvR" title="按当前编码从中间码重新转换">↻</button><span><span class="ro-badge" id="badgeR" hidden>只读</span> 右 right</span></div>
+            <div class="cap"><select id="encR"></select><button class="reconv" id="reconvR" title="按当前编码重新转换（本栏 → 中间码 → 另一栏；只读栏则由中间码重算本栏）">↻</button><span><span class="ro-badge" id="badgeR" hidden>只读</span> 右 right</span></div>
             <textarea class="mong" id="boxR" placeholder="选编码 / 由中间转入"></textarea>
             <div class="hex" id="hexR"></div>
         </div>
     </div>
 
-    <footer><a href="../">← 其他工具 / other tools</a> · <a href="https://github.com/Satsrag/meco-rust">Satsrag/meco-rust</a></footer>
+    <footer><a href="../">← 其他工具 / other tools</a> · <a href="https://github.com/Satsrag/meco-rust">Satsrag/meco-rust</a>
+        · <a href="#" id="forget" title="清空本浏览器记住的编码选择和文本">清除本地记忆</a></footer>
 
 <script type="module">
 import init, { translate, version } from "./pkg/meco_wasm.js";
@@ -100,6 +101,28 @@ const FALLBACK = ",'zvvn mod',sans-serif";
 const SPECIAL = {0x0020:"SP",0x202f:"NNBSP",0x180e:"MVS",0x180b:"FVS1",0x180c:"FVS2",0x180d:"FVS3",
                  0x180f:"FVS4",0x180a:"NIRUGU",0x200d:"ZWJ",0x200c:"ZWNJ"};
 const $ = id => document.getElementById(id);
+
+// --- local memory --------------------------------------------------------
+// Per-browser only: the selected encoding/font of each side plus what is in the three boxes, so a
+// reload lands you where you left off. Every access is guarded — storage throws outright in some
+// privacy modes, and a page that cannot remember must still work.
+const LS_KEY = "meco-wasm-demo/v1";
+function saveState(){
+    try{
+        localStorage.setItem(LS_KEY, JSON.stringify({
+            encL:$("encL").value, encR:$("encR").value,
+            L:$("boxL").value, M:$("boxM").value, R:$("boxR").value,
+        }));
+    }catch(e){ /* storage unavailable — carry on without memory */ }
+}
+function loadState(){
+    try{ return JSON.parse(localStorage.getItem(LS_KEY)) || null; }
+    catch(e){ return null; }
+}
+function forgetState(){
+    try{ localStorage.removeItem(LS_KEY); }catch(e){}
+    location.reload();
+}
 
 function hex(s){
     if(!s) return "";
@@ -137,13 +160,19 @@ function tr(from,to,s,slot){
     catch(e){ errs[slot] = (e && e.message) || String(e); return null; }
 }
 
-// Re-encode one side from the hub, in whatever encoding that side currently selects.
+// ↻ reruns the conversion for one side in whichever direction that side can go.
+// A normal pane holds text meco can decode, so it becomes the source and redrives the hub and the
+// far pane — this is what you want after fixing a selector that was wrong when the text went in.
+// An output-only pane has no decoder, so it can only be re-encoded from the hub.
 function reconvert(which){
+    if(!OUTPUT_ONLY.has(encOf(which))){ recompute(which); return; }
+    errs[which] = null;
     const out = tr("zvvnmod", encOf(which), $("boxM").value, which);
     $("box"+which).value = out===null ? "" : out;
     $("hex"+which).innerHTML = errs[which]
         ? `<span class="err">${encOf(which)}: ${errs[which]}</span>`
         : hex($("box"+which).value);
+    saveState();
 }
 
 // recompute from a source box ("L" | "M" | "R")
@@ -169,20 +198,30 @@ function recompute(src){
         if(x!==src && errs[x]) fail(x, `${encOf(x)}: ${errs[x]}`);
         else $("hex"+x).innerHTML = hex($("box"+x).value);
     });
+    saveState();
 }
 
 function wire(){
-    fillSel($("encL"),"z52");
-    fillSel($("encR"),"menk_shape");
+    const st = loadState();
+    const pick = (v,def) => SIDE_TYPES.includes(v) ? v : def;
+    fillSel($("encL"), pick(st && st.encL, "z52"));
+    fillSel($("encR"), pick(st && st.encR, "menk_shape"));
     applyFonts();
+    if(st){ // restore text verbatim: re-running the conversion could rewrite what you left here
+        ["L","M","R"].forEach(x=>{
+            $("box"+x).value = st[x] || "";
+            $("hex"+x).innerHTML = hex($("box"+x).value);
+        });
+    }
+    $("forget").onclick = e => { e.preventDefault(); forgetState(); };
     const deb = src => { clearTimeout(window._t); window._t=setTimeout(()=>recompute(src),120); };
     $("boxL").addEventListener("input",()=>deb("L"));
     $("boxM").addEventListener("input",()=>deb("M"));
     $("boxR").addEventListener("input",()=>deb("R"));
     // Changing a side only reswaps that pane's font: the same code points render differently under
     // the Menk / Delehi / UTN #57 conventions, and that comparison is the point. ↻ recomputes.
-    $("encL").onchange = ()=>applySide("L");
-    $("encR").onchange = ()=>applySide("R");
+    $("encL").onchange = ()=>{ applySide("L"); saveState(); };
+    $("encR").onchange = ()=>{ applySide("R"); saveState(); };
     $("reconvL").onclick = ()=>reconvert("L");
     $("reconvR").onclick = ()=>reconvert("R");
     document.querySelectorAll(".samples button").forEach(b=>b.onclick=()=>{
