@@ -91,6 +91,10 @@
     #report { width:min(760px,92vw); border:1px solid var(--bd); border-radius:12px; padding:0;
               color:#222; background:var(--bg); }
     #report::backdrop { background:rgb(20 18 12 / .38); }
+    /* The dialog gets out of its own way while a frame is captured — the point of the shot is the
+       panes underneath it. Hidden by visibility, not display, so nothing reflows. */
+    #report.capturing { visibility:hidden; }
+    #report.capturing::backdrop { background:transparent; }
     #report .rp { padding:16px 18px; }
     #report h2 { margin:0 0 6px; font-size:15px; }
     #report p { margin:0 0 12px; font-size:12px; line-height:1.6; color:var(--mut); }
@@ -485,8 +489,13 @@ let shot = null; // Blob
 const canShoot = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
 
 async function grabShot(){
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: "browser" }, audio: false, preferCurrentTab: true });
+    $("report").classList.add("capturing");
+    // let the hide actually paint before any frame can be grabbed
+    await new Promise(r => requestAnimationFrame(()=>requestAnimationFrame(r)));
+    let stream;
+    try{ stream = await navigator.mediaDevices.getDisplayMedia({
+             video: { displaySurface: "browser" }, audio: false, preferCurrentTab: true }); }
+    catch(e){ $("report").classList.remove("capturing"); throw e; }
     try{
         const video = Object.assign(document.createElement("video"), { srcObject: stream, muted: true });
         await video.play();
@@ -495,7 +504,10 @@ async function grabShot(){
                                 { width: video.videoWidth, height: video.videoHeight });
         c.getContext("2d").drawImage(video, 0, 0);
         return await new Promise(r => c.toBlob(r, "image/png"));
-    } finally { stream.getTracks().forEach(t=>t.stop()); }
+    } finally {
+        stream.getTracks().forEach(t=>t.stop());
+        $("report").classList.remove("capturing");
+    }
 }
 function showShot(blob){
     shot = blob;
