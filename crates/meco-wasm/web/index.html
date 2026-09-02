@@ -77,17 +77,25 @@
     .cu.sel.bad { background:#c0392b; color:#fff; }
     .cu.sel.bad .tag { color:#f6d0cb; }
     .err { color:#c0392b; }
-    .linkbtn { font:inherit; color:var(--acc); background:none; border:0; padding:0; cursor:pointer;
-               text-decoration:underline; }
-    /* Error toast: fixed, so raising it never reflows the three-pane grid. */
-    #alert { position:fixed; right:20px; bottom:16px; z-index:20; max-width:min(520px,calc(100vw - 40px));
-             display:flex; gap:10px; align-items:flex-start;
-             font-size:12px; line-height:1.5; color:#7d2b20; background:#fdf1ef;
-             border:1px solid #e5b3aa; border-radius:9px; padding:10px 12px;
-             box-shadow:0 6px 20px rgb(60 20 10 / .12); }
-    #alert button { flex:0 0 auto; font:inherit; font-size:12px; padding:2px 8px; cursor:pointer;
-                    color:#7d2b20; background:#fff; border:1px solid #d99a90; border-radius:6px; }
+    /* Always-on bar in the page column, never floating, so it cannot cover the code-point rows.
+       Calm but visible while things work; solid red the moment a conversion actually fails. */
+    #alert { flex:0 0 auto; display:flex; gap:10px; align-items:center; margin-bottom:8px;
+             font-size:13px; line-height:1.45; color:#12463a; background:#e4f3ec;
+             border:1px solid var(--acc); border-radius:9px; padding:8px 12px; }
     #alert span { flex:1 1 auto; min-width:0; word-break:break-word; }
+    #alert button { flex:0 0 auto; font:inherit; font-size:12px; font-weight:600; padding:4px 11px;
+                    cursor:pointer; color:#fff; background:var(--acc); border:1px solid var(--acc);
+                    border-radius:6px; }
+    #alert button:hover { filter:brightness(1.12); }
+    #alert button[hidden] { display:none; }
+    #alert.bad { color:#fff; background:#c0392b; border-color:#9c2d20;
+                 box-shadow:0 2px 12px rgb(160 45 30 / .28); }
+    #alert.bad::before { content:"⚠"; flex:0 0 auto; font-size:17px; line-height:1; }
+    #alert.bad button { color:#c0392b; background:#fff; border-color:#fff; }
+    #alert.bad button:hover { filter:none; background:#ffe6e2; }
+    @keyframes alertIn { from { opacity:.4; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+    #alert.bad { animation:alertIn .18s ease-out; }
+    @media (prefers-reduced-motion: reduce) { #alert.bad { animation:none; } }
     #report { width:min(760px,92vw); border:1px solid var(--bd); border-radius:12px; padding:0;
               color:#222; background:var(--bg); }
     #report::backdrop { background:rgb(20 18 12 / .38); }
@@ -135,6 +143,12 @@
         重新转换并换用该编码的字体；不属于该栏编码的字符<b class="err">标红</b>（文字和码点同时）。</span>
         <span id="status">loading WASM… / 加载中…</span></div>
 
+    <div id="alert">
+        <span id="alertMsg"></span>
+        <button type="button" id="alertReport">Report / 报个问题</button>
+        <button type="button" id="alertClose" aria-label="dismiss / 关闭" hidden>×</button>
+    </div>
+
     <div class="panes">
         <div class="pane" id="paneL">
             <div class="cap"><select id="encL"></select><span><span class="ro-badge" id="badgeL" hidden>read-only</span> Left / 左</span></div>
@@ -156,14 +170,8 @@
     </div>
 
     <footer><a href="../">← other tools / 其他工具</a> · <a href="https://github.com/Satsrag/meco-rust">Satsrag/meco-rust</a>
-        · <button type="button" class="linkbtn" id="report-open">Report a problem / 报个问题</button>
         · <a href="#" id="forget" title="clear the encodings and text this browser remembers / 清空本浏览器记住的编码选择和文本">forget local memory / 清除本地记忆</a></footer>
 
-    <div id="alert" hidden>
-        <span id="alertMsg"></span>
-        <button type="button" id="alertReport">Report / 报个问题</button>
-        <button type="button" id="alertClose" aria-label="dismiss / 关闭">×</button>
-    </div>
 
     <dialog id="report">
         <div class="rp">
@@ -533,16 +541,25 @@ function openReport(){
     $("report").showModal();
 }
 
-// The toast only fires on a real failure — meco throwing. Out-of-encoding text is already obvious
-// from the red marking and is usually the wrong encoding picked, not a bug, so it never nags.
+// The bar is always there — the report entry point should never be hunted for. It only turns red
+// when meco actually throws. Out-of-encoding text is already obvious from the red marking and is
+// usually the wrong encoding picked rather than a bug, so it does not raise the alarm.
+const IDLE_MSG = "A conversion looks wrong? Report it — the code points go along automatically. "
+               + "/ 转换结果不对？点右边报一下，码点会自动带上。";
 let shown = null;
+function idle(){
+    $("alert").classList.remove("bad");
+    $("alertMsg").textContent = IDLE_MSG;
+    $("alertClose").hidden = true;
+}
 function updateAlert(){
     const err = errs.L || errs.M || errs.R || null;
-    if(!err){ $("alert").hidden = true; shown = null; return; }
-    if(err === shown) return;              // same failure, already offered or dismissed
+    if(!err){ idle(); shown = null; return; }
+    if(err === shown) return;              // same failure, already raised or dismissed
     shown = err;
+    $("alert").classList.add("bad");
     $("alertMsg").textContent = "Conversion failed / 转换报错: " + err;
-    $("alert").hidden = false;
+    $("alertClose").hidden = false;
 }
 
 function wire(){
@@ -555,10 +572,10 @@ function wire(){
         ["L","M","R"].forEach(x=>{ $("box"+x).value = st[x] || ""; });
     }
     ["L","M","R"].forEach(paintPane);
+    idle();
     $("forget").onclick = e => { e.preventDefault(); forgetState(); };
-    $("report-open").onclick = openReport;
     $("alertReport").onclick = openReport;
-    $("alertClose").onclick = ()=>{ $("alert").hidden = true; };
+    $("alertClose").onclick = idle;   // back to the calm state; the same error will not re-raise
     $("reportCancel").onclick = ()=>$("report").close();
     $("reportCopy").onclick = async ()=>{
         const t = $("reportWhat").value.trim() + "\n\n" + $("reportBody").textContent;
