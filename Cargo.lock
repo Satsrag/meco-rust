@@ -318,9 +318,9 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "mongol-norm"
-version = "0.0.4"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d7f32055e52003c405d082eb36c8ac71554877f2f5d4daa5f3cc90f65e65ffb"
+checksum = "2f2cbb3ad9c3dabb45d5939a7951fe51a4c536fe5ec2f7cc940ad29949508689"
 
 [[package]]
 name = "nom"
@@ -816,9 +816,9 @@ checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
 
 [[package]]
 name = "zvvnmod-utn57"
-version = "0.1.0-alpha.4"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aace62551a2fe776d170cdae537d2bf3ab524a5c7715c3ab0483a6d13313a4c6"
+checksum = "53df4c3a2e42d903c41b573ab498f7db14852f7fea260c8d6cb5d7169a42e015"
 dependencies = [
  "mongol-norm",
 ]

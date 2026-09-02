@@ -25,4 +25,4 @@ utn57-command = []
 
 [dependencies]
 # Pure-Rust ZVVNMOD → UTN #57 conversion (no subprocess, no Python, wasm32 compatible).
-zvvnmod-utn57 = "=0.1.0-alpha.4"
+zvvnmod-utn57 = "=0.1.0"
