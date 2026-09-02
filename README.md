@@ -89,7 +89,7 @@ On zsh, a `%` displayed immediately after the result is the shell's end-of-line 
 
 ## Convert to UTN #57
 
-UTN #57 output uses the reviewed ZVVNMOD-to-positioned-written-unit mapping from `zvvnmod-utn57 0.1.0-alpha.4` and the pinned pure-Rust `mongol-norm 0.0.4` normalizer. Both are compiled into `meco`; nothing else has to be installed.
+UTN #57 output uses the reviewed ZVVNMOD-to-positioned-written-unit mapping from `zvvnmod-utn57 0.1.0` and the pinned pure-Rust `mongol-norm 0.1.1` normalizer. Both are compiled into `meco`; nothing else has to be installed.
 
 ```sh
 meco translate --from z52 --to utn57 'ᡳᡬᡦ ᢌᡭᡪᢊᡱᡱᡭᢐ ᢋᡭᡬᢎᡭᡧ'; echo
@@ -209,8 +209,8 @@ UTN #57 output adds two reviewed stages, both linked into the same binary:
 source encoding
 → meco-core
 → ZVVNMOD positioned shapes
-→ zvvnmod-utn57 0.1.0-alpha.4 positioned written units
-→ mongol-norm 0.0.4 (pure Rust, in process)
+→ zvvnmod-utn57 0.1.0 positioned written units
+→ mongol-norm 0.1.1 (pure Rust, in process)
 → Unicode letters and format controls
 ```
 

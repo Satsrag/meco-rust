@@ -89,7 +89,7 @@ macOS 默认 zsh 有时会在结果末尾显示 `%`。这是 zsh 的“上一条
 
 ## 转换到 UTN #57
 
-UTN #57 路径使用 `zvvnmod-utn57 0.1.0-alpha.4` 中 reviewed 的 ZVVNMOD → positioned written unit mapping，以及固定版本的纯 Rust 归一化库 `mongol-norm 0.0.4`。两者都已编译进 `meco`，不需要额外安装任何东西。
+UTN #57 路径使用 `zvvnmod-utn57 0.1.0` 中 reviewed 的 ZVVNMOD → positioned written unit mapping，以及固定版本的纯 Rust 归一化库 `mongol-norm 0.1.1`。两者都已编译进 `meco`，不需要额外安装任何东西。
 
 ```sh
 meco translate --from z52 --to utn57 'ᡳᡬᡦ ᢌᡭᡪᢊᡱᡱᡭᢐ ᢋᡭᡬᢎᡭᡧ'; echo
@@ -209,8 +209,8 @@ UTN #57 输出增加两个 reviewed 阶段，都链接在同一个二进制里�
 源编码
 → meco-core
 → ZVVNMOD positioned shapes
-→ zvvnmod-utn57 0.1.0-alpha.4 positioned written units
-→ mongol-norm 0.0.4（纯 Rust，进程内）
+→ zvvnmod-utn57 0.1.0 positioned written units
+→ mongol-norm 0.1.1（纯 Rust，进程内）
 → Unicode 字母和格式控制符
 ```
 

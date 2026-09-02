@@ -64,8 +64,8 @@ The conversion path is:
 ```text
 source encoding
 → meco-core ZVVNMOD hub
-→ zvvnmod-utn57 0.1.0-alpha.4 positioned written units
-→ mongol-norm 0.0.4 (linked in)
+→ zvvnmod-utn57 0.1.0 positioned written units
+→ mongol-norm 0.1.1 (linked in)
 → canonical Unicode
 ```
 
