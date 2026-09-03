@@ -140,11 +140,12 @@
     <div class="sub">
         Type on the left, read the output on the right; the middle pane is the <b>Zvvnmod</b> hub and
         takes input too. Everything runs locally, in WebAssembly built from the Rust core.
-        <b>utn57</b> is a target only — meco has no decoder for it. Changing an encoding reconverts at
-        once and switches to that encoding's font; characters that do not belong to a pane's encoding
-        are <b class="err">marked red</b>, in the text and in the code points under it.
+        <b>utn57</b> now reads as well as writes, though the round trip through it is not yet
+        lossless. Changing an encoding reconverts at once and switches to that encoding's font;
+        characters that do not belong to a pane's encoding are <b class="err">marked red</b>, in the
+        text and in the code points under it.
         <span class="zh">左栏输入，右栏只读输出，中间是 <b>Zvvnmod</b> 中间码（也可直接输入）；全部由 Rust
-        核心编译的 WebAssembly 在浏览器本地完成。<b>utn57</b> 只作目标，meco 不能反向解码。切换编码会立即
+        核心编译的 WebAssembly 在浏览器本地完成。<b>utn57</b> 现在可读可写，但经它往返尚未无损。切换编码会立即
         重新转换并换用该编码的字体；不属于该栏编码的字符<b class="err">标红</b>（文字和码点同时）。</span>
         <span id="status">loading WASM… / 加载中…</span></div>
 
@@ -211,9 +212,10 @@
 import init, { translate, version } from "./pkg/meco_wasm.js";
 
 const SIDE_TYPES = ["z52", "menk_shape", "menk_letter", "delehi", "utn57"]; // oyun still deferred
-const OUTPUT_ONLY = new Set(["utn57"]); // meco can encode these, not decode them
-const SOURCE_TYPES = SIDE_TYPES.filter(t=>!OUTPUT_ONLY.has(t)); // the left pane must be decodable
-const TARGET_TYPES = [...OUTPUT_ONLY, ...SOURCE_TYPES];        // utn57 leads the output side
+// Every one of these reads and writes; the left/right split is a layout choice about where you
+// type, not a limit on what meco can decode.
+const SOURCE_TYPES = SIDE_TYPES;
+const TARGET_TYPES = ["utn57", ...SIDE_TYPES.filter(t=>t!=="utn57")]; // utn57 leads the output side
 
 // The national standard each Unicode-side encoding follows. z52 and menk_shape are vendor shape
 // codes with no standard behind them, so they stay bare.

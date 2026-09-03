@@ -10,8 +10,8 @@ translate("z52", "menk_shape", input); // -> String; throws on unknown encoding 
 ```
 
 `from`/`to` are canonical encoding names: `zvvnmod`, `delehi`, `menk_shape`, `menk_letter`, `z52`.
-`utn57` (canonical UTN #57 Unicode) is accepted as `to` only; the conversion runs inside the wasm
-module with no network or filesystem access.
+`utn57` (canonical UTN #57 Unicode) works as either; the conversion runs inside the wasm module
+with no network or filesystem access.
 
 ## Status
 

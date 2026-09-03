@@ -24,7 +24,7 @@ pub enum MecoError {
     UnsupportedEnumType(String),
     /// Conversion involving this code is not supported in the active build.
     Unsupported(CodeType),
-    /// The in-process UTN #57 target conversion (`zvvnmod-utn57` + `mongol-norm`) failed.
+    /// An in-process UTN #57 conversion (`zvvnmod-utn57` + `mongol-norm`), either direction, failed.
     Utn57(String),
 }
 

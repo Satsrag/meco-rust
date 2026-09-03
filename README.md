@@ -20,7 +20,7 @@ Canonical UTN #57 Unicode output is built in on every platform. The conversion i
 | `menk_shape` | Menk positional shape encoding | Yes | Yes |
 | `menk_letter` | Menk letter convention | Yes | Yes |
 | `z52` | Z52/zcode positional encoding | Yes | Yes |
-| `utn57` | Unicode output following the reviewed UTN #57 mapping | No | Yes |
+| `utn57` | Unicode following the reviewed UTN #57 mapping | Yes | Yes |
 | `oyun` | Reserved by the original API | No | No |
 
 MenkLetter and Delehi use many of the same Unicode code points, but they apply different contextual rules. `meco` does not guess the source encoding. Choose `--from` from the application, input method, font system, or database column that produced the text.
@@ -104,21 +104,28 @@ meco translate --from menk_shape --to utn57 '...'
 meco translate --from zvvnmod --to utn57 '...'
 ```
 
-Reverse conversion from UTN #57 is not implemented:
+UTN #57 also reads back, so it works as `--from` like any other encoding:
 
-```text
---from utn57 → unsupported
+```sh
+meco translate --from utn57 --to delehi '...'
+meco translate --from utn57 --to z52 '...'
 ```
+
+The reverse is not yet a perfect inverse. Over the 1,508-word corpus in
+`crates/meco-core/tests/golden/corpus_delehi.txt`, 1,020 of the 1,053 words that carry no
+control ZVVNMOD drops on the way out survive `zvvnmod → utn57 → zvvnmod` unchanged; 33 do not,
+mostly by gaining or losing a shape code. `tests/utn57.rs` pins those counts, so the gap cannot
+widen unnoticed. Keep the original text when the round-trip matters.
 
 ### UTN #57 troubleshooting
 
 #### `conversion not supported for Utn57`
 
-`utn57` was passed as `--from`. Reverse conversion is not implemented; UTN #57 is an output target only. If an older `meco` reports this for `--to utn57`, upgrade to 0.3.0 or newer, where UTN #57 output no longer needs the `utn57-command` feature or an external backend.
+An older `meco`. Current versions read UTN #57 as well as write it, and neither direction needs the `utn57-command` feature or an external backend. Upgrade.
 
 #### `UTN #57 conversion failed: ...`
 
-The in-process backend rejected the ZVVNMOD hub text. Check that `--from` names the encoding the text was actually produced in, and report the input together with the message if the source is correct.
+The in-process backend rejected the text — the ZVVNMOD hub going out, or the UTN #57 input coming back. Check that `--from` names the encoding the text was actually produced in, and report the input together with the message if the source is correct.
 
 #### The output contains FVS, MVS, or ZWJ
 
@@ -218,7 +225,7 @@ MenkLetter and Delehi are letter-level source conventions. MenkShape and Z52 are
 
 ## Data safety and round trips
 
-Keep the original text when migrating a corpus. Conversions can normalize FVS/MVS sequences, collapse several legacy spellings into one target spelling, or lose source-specific boundary information. Current UTN #57 conversion is output-only.
+Keep the original text when migrating a corpus. Conversions can normalize FVS/MVS sequences, collapse several legacy spellings into one target spelling, or lose source-specific boundary information. UTN #57 converts both ways, but the round trip is not yet lossless — see the counts above.
 
 A practical storage model is:
 

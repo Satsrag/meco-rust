@@ -7,7 +7,7 @@ use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
 /// Translate `input` from encoding `from` to `to`. `from`/`to` are canonical encoding names
-/// ("zvvnmod", "delehi", "menk_shape", "menk_letter", "z52", plus the output-only "utn57").
+/// ("zvvnmod", "delehi", "menk_shape", "menk_letter", "z52", "utn57").
 /// Throws a JS `Error` on an unknown encoding name or an unsupported conversion.
 #[wasm_bindgen]
 pub fn translate(from: &str, to: &str, input: &str) -> Result<String, JsError> {

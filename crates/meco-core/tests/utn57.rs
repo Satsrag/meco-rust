@@ -76,10 +76,69 @@ fn legacy_controls_are_discarded() {
 }
 
 #[test]
-fn reverse_utn57_conversion_remains_unsupported() {
-    assert_eq!(
-        translate(CodeType::Utn57, CodeType::MenkShape, "\u{1820}").unwrap_err(),
-        MecoError::Unsupported(CodeType::Utn57)
+fn utn57_decodes_back_to_the_hub() {
+    // The reverse must land on exactly the hub value the forward direction started from, or the two
+    // halves disagree about what a word is.
+    let hub = translate(CodeType::Delehi, CodeType::Zvvnmod, "\u{1830}\u{1820}\u{180D}\u{1822}\u{180D}\u{1822}\u{1828}").unwrap();
+    let utn57 = translate(CodeType::Zvvnmod, CodeType::Utn57, &hub).unwrap();
+    assert_eq!(translate(CodeType::Utn57, CodeType::Zvvnmod, &utn57).unwrap(), hub);
+}
+
+#[test]
+fn utn57_is_a_source_for_the_other_encodings() {
+    // ᠮᠣᠩᠭᠣᠯ, whose UTN #57 spelling uses FVS1 and FVS2 that the letter encodings do not.
+    let delehi = "\u{182E}\u{1823}\u{1829}\u{182D}\u{1823}\u{182F}";
+    let utn57 = translate(CodeType::Delehi, CodeType::Utn57, delehi).unwrap();
+    assert_ne!(utn57, delehi, "the two conventions spell this word differently");
+    assert_eq!(translate(CodeType::Utn57, CodeType::Delehi, &utn57).unwrap(), delehi);
+
+    let via_utn57 = translate(CodeType::Utn57, CodeType::MenkShape, &utn57).unwrap();
+    let via_delehi = translate(CodeType::Delehi, CodeType::MenkShape, delehi).unwrap();
+    assert_eq!(via_utn57, via_delehi, "either source should reach the same MenkShape text");
+}
+
+/// zvvnmod -> utn57 -> zvvnmod over the real corpus. It is not the identity yet: `zvvnmod-utn57`
+/// 0.1.1's reverse mapping does not reconstruct every hub value, so this pins the current numbers
+/// instead of pretending. Tighten the bounds when the backend improves — a run that beats them
+/// fails, which is the point.
+///
+/// Two classes are skipped rather than papered over, because the forward direction documents that
+/// it drops them: the legacy ZVVNMOD controls U+E140..=U+E144, and ZWJ.
+#[test]
+fn hub_round_trip_over_the_corpus_matches_the_known_gap() {
+    const LOSSY: fn(char) -> bool = |c| matches!(c, '\u{E140}'..='\u{E144}' | '\u{200D}');
+    const MIN_OK: usize = 1020;   // zvvnmod-utn57 0.1.1
+    const MAX_BROKEN: usize = 33; // ditto
+
+    let corpus = std::fs::read_to_string(
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/corpus_delehi.txt"),
+    )
+    .expect("corpus should be readable");
+
+    let (mut ok, mut broken) = (0usize, 0usize);
+    let mut sample = Vec::new();
+    for word in corpus.split_whitespace() {
+        let Ok(hub) = translate(CodeType::Delehi, CodeType::Zvvnmod, word) else { continue };
+        if hub.chars().any(LOSSY) {
+            continue;
+        }
+        let Ok(utn57) = translate(CodeType::Zvvnmod, CodeType::Utn57, &hub) else { continue };
+        let Ok(back) = translate(CodeType::Utn57, CodeType::Zvvnmod, &utn57) else { continue };
+        if back == hub {
+            ok += 1;
+        } else {
+            broken += 1;
+            if sample.len() < 3 {
+                sample.push(format!("{word:?}: {hub:?} -> {utn57:?} -> {back:?}"));
+            }
+        }
+    }
+
+    assert!(ok >= MIN_OK, "round-trip regressed: {ok} words survived, expected at least {MIN_OK}");
+    assert!(
+        broken <= MAX_BROKEN,
+        "round-trip regressed: {broken} words broke, expected at most {MAX_BROKEN}\n{}",
+        sample.join("\n")
     );
 }
 

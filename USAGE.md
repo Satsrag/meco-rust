@@ -210,7 +210,7 @@ echo Meco::translate(Meco::Z52, Meco::MENK_SHAPE, $input);
 ---
 
 ### Notes
-- `from`/`to` accept the canonical names above. `oyun` remains unsupported. `utn57` is output-only
+- `from`/`to` accept the canonical names above. `oyun` remains unsupported. `utn57` converts both ways
   (valid as `to`, rejected as `from`) and is available in every binding and prebuilt package.
 - Unmappable in-range characters pass through unchanged (lenient policy).
 - Set the dynamic-loader path at runtime if the lib isn't installed system-wide:

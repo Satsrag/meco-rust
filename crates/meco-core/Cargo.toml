@@ -20,9 +20,10 @@ path = "src/bin/meco.rs"
 [features]
 default = []
 # Deprecated no-op kept so existing `--features utn57-command` builds keep working. UTN #57
-# output is always available since 0.3.0: the backend is pure Rust and linked into the core.
+# conversion is always available in both directions: the backend is pure Rust and linked into the
+# core.
 utn57-command = []
 
 [dependencies]
-# Pure-Rust ZVVNMOD → UTN #57 conversion (no subprocess, no Python, wasm32 compatible).
-zvvnmod-utn57 = "=0.1.0"
+# Pure-Rust ZVVNMOD ↔ UTN #57 conversion (no subprocess, no Python, wasm32 compatible).
+zvvnmod-utn57 = "=0.1.1"

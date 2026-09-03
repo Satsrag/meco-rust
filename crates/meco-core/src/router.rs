@@ -2,8 +2,8 @@
 //!
 //! Hub-and-spoke through Zvvnmod: decode `from` to the hub (unless it is the hub), then encode the
 //! hub to `to` (unless it is the hub). Short-circuit exactly as Java: identity or blank input is
-//! returned unchanged. Oyun and UTN #57 source text are Unsupported. UTN #57 is always available
-//! as a target: the hub text is handed to the pure-Rust `zvvnmod-utn57` crate in process.
+//! returned unchanged. Oyun stays Unsupported in both directions. UTN #57 goes both ways, handed
+//! to the pure-Rust `zvvnmod-utn57` crate in process rather than through the letter/shape tables.
 
 use crate::code_type::{CodeSeries, CodeType};
 use crate::dispatch::{letter_from_rule, letter_to_rule, shape_from_rule, shape_to_rule};
@@ -30,9 +30,12 @@ pub fn translate(from: CodeType, to: CodeType, input: &str) -> Result<String, Me
 }
 
 fn translate_from(ct: CodeType, s: &str) -> Result<String, MecoError> {
-    // Oyun and reverse conversion from canonical UTN #57 text remain deferred.
-    if matches!(ct, CodeType::Oyun | CodeType::Utn57) {
+    if ct == CodeType::Oyun {
         return Err(MecoError::Unsupported(ct));
+    }
+    if ct == CodeType::Utn57 {
+        return zvvnmod_utn57::convert_utn57_to_zvvnmod(s)
+            .map_err(|error| MecoError::Utn57(error.to_string()));
     }
     match ct.code_series() {
         CodeSeries::Shape => ShapeTranslator::new(shape_from_rule(ct)?).translate(s),

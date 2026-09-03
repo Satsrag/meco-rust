@@ -18,8 +18,8 @@ pub enum CodeSeries {
 /// The supported Mongolian encodings. One variant per Java `CodeType` (in declaration order).
 /// `Zvvnmod` is the intermediate hub. Port of `CodeType.java` lines 14-20.
 ///
-/// `Oyun` and `Utn57` are parseable. `Oyun` and UTN #57 as a source remain unsupported; UTN #57
-/// is always available as an output target.
+/// `Oyun` and `Utn57` are parseable. `Oyun` remains unsupported in both directions; UTN #57
+/// converts both ways through the in-process `zvvnmod-utn57` backend.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum CodeType {
     Zvvnmod,
