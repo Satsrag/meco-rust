@@ -21,12 +21,11 @@
     body { height:100%; margin:0; display:flex; flex-direction:column;
            background:var(--bg); color:#222; padding:16px 20px;
            font-family:system-ui,-apple-system,"PingFang SC",sans-serif; }
-    h1, .sub, footer { flex:0 0 auto; }
-    h1 { font-size:17px; margin:0 0 4px; }
-    .sub { font-size:12px; color:var(--mut); margin-bottom:10px; }
-    .sub .zh, .zh { display:block; margin-top:3px; }
+    h1, footer { flex:0 0 auto; }
+    h1 { font-size:17px; margin:0 0 10px; }
+    .zh { display:block; margin-top:3px; }
     .h1zh { font-weight:400; color:var(--mut); }
-    #status { font-weight:700; }
+    #status { margin-left:10px; font-size:12px; font-weight:400; color:var(--mut); }
 
     /* One grid for all three panes, so the caption / box / code-point rows line up across them no
        matter how much each row's content needs. `.pane` is display:contents, which keeps its
@@ -136,18 +135,7 @@
 </style>
 </head>
 <body>
-    <h1>Mongolian encoding converter <span class="h1zh">蒙古语编码转换</span></h1>
-    <div class="sub">
-        Type on the left, read the output on the right; the middle pane is the <b>Zvvnmod</b> hub and
-        takes input too. Everything runs locally, in WebAssembly built from the Rust core.
-        <b>utn57</b> now reads as well as writes, though the round trip through it is not yet
-        lossless. Changing an encoding reconverts at once and switches to that encoding's font;
-        characters that do not belong to a pane's encoding are <b class="err">marked red</b>, in the
-        text and in the code points under it.
-        <span class="zh">左栏输入，右栏只读输出，中间是 <b>Zvvnmod</b> 中间码（也可直接输入）；全部由 Rust
-        核心编译的 WebAssembly 在浏览器本地完成。<b>utn57</b> 现在可读可写，但经它往返尚未无损。切换编码会立即
-        重新转换并换用该编码的字体；不属于该栏编码的字符<b class="err">标红</b>（文字和码点同时）。</span>
-        <span id="status">loading WASM… / 加载中…</span></div>
+    <h1>Mongolian encoding converter <span class="h1zh">蒙古语编码转换</span><span id="status">loading WASM… / 加载中…</span></h1>
 
     <div id="alert">
         <span id="alertMsg"></span>
