@@ -31,7 +31,7 @@ UTN #57 Unicode 输出已经内置到所有平台。转换逻辑是纯 Rust、�
 | `menk_shape` | Menk 位置字形编码 | 是 | 是 |
 | `menk_letter` | Menk 字母约定 | 是 | 是 |
 | `z52` | Z52/zcode 位置字形编码 | 是 | 是 |
-| `utn57` | 按 reviewed UTN #57 mapping 生成的 Unicode 输出 | 否 | 是 |
+| `utn57` | 按 reviewed UTN #57 mapping 的 Unicode | 是 | 是 |
 | `oyun` | 原始 API 保留的类型 | 否 | 否 |
 
 MenkLetter 和 Delehi 使用很多相同的 Unicode 码位，但上下文解释规则不同。`meco` 不会自动猜测源编码。应根据产生文本的应用、输入法、字体系统或数据库字段选择 `--from`。
@@ -115,21 +115,27 @@ meco translate --from menk_shape --to utn57 '...'
 meco translate --from zvvnmod --to utn57 '...'
 ```
 
-目前没有实现 UTN #57 反向转换：
+UTN #57 现在也能反向读回，可以像其他编码一样用作 `--from`：
 
-```text
---from utn57 → 不支持
+```sh
+meco translate --from utn57 --to delehi '...'
+meco translate --from utn57 --to z52 '...'
 ```
+
+反向还不是严格的逆运算。在 `crates/meco-core/tests/golden/corpus_delehi.txt` 的 1,508 词语料上，
+排除正向本就会丢弃的控制字符后，1,053 个词里有 1,020 个经 `zvvnmod → utn57 → zvvnmod` 原样返回，
+33 个不返回，多数是多了或少了一个字形码。`tests/utn57.rs` 把这两个数字钉住了，缺口扩大会立刻失败。
+往返结果要紧时请保留原文。
 
 ### UTN #57 常见问题
 
 #### `conversion not supported for Utn57`
 
-把 `utn57` 用在了 `--from`。目前没有实现反向转换，UTN #57 只能作为输出目标。如果是旧版 `meco` 在 `--to utn57` 时报这个错误，请升级到 0.3.0 或更新版本；新版本的 UTN #57 输出不再需要 `utn57-command` feature 和外部 backend。
+旧版 `meco`。当前版本的 UTN #57 可读可写，两个方向都不需要 `utn57-command` feature 或外部 backend。升级即可。
 
 #### `UTN #57 conversion failed: ...`
 
-进程内的 backend 拒绝了 ZVVNMOD 中间文本。先确认 `--from` 是文本真实的源编码；如果源编码无误，请把输入和错误信息一起反馈。
+进程内的 backend 拒绝了这段文本（正向是 ZVVNMOD 中间码，反向是 UTN #57 输入）。先确认 `--from` 是文本真实的源编码；如果源编码无误，请把输入和错误信息一起反馈。
 
 #### 输出中出现 FVS、MVS 或 ZWJ
 
@@ -229,7 +235,7 @@ MenkLetter 和 Delehi 是字母级源约定；MenkShape 和 Z52 偏位置字形�
 
 ## 数据安全与往返转换
 
-迁移语料时应保留原文。转换可能规范化 FVS/MVS 序列、把多个旧写法合并为一个目标写法，或丢失源编码特有的边界信息。当前 UTN #57 只有输出方向。
+迁移语料时应保留原文。转换可能规范化 FVS/MVS 序列、把多个旧写法合并为一个目标写法，或丢失源编码特有的边界信息。UTN #57 两个方向都能转，但往返尚未无损 —— 具体数字见上文。
 
 建议至少保留：
 

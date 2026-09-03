@@ -10,7 +10,7 @@ version() -> String
 ```
 
 `from`/`to` are canonical encoding names: `zvvnmod`, `delehi`, `menk_shape`, `menk_letter`, `z52`.
-`utn57` (canonical UTN #57 Unicode) is accepted as `to` only and runs fully in process.
+`utn57` (canonical UTN #57 Unicode) works as either and runs fully in process.
 
 ## Status
 

@@ -46,15 +46,29 @@ fn converts_to_utn57_without_any_external_backend() {
 }
 
 #[test]
-fn rejects_utn57_as_a_source() {
+fn accepts_utn57_as_a_source() {
+    // ᠮᠣᠩᠭᠣᠯ spelled the UTN #57 way, which is not how delehi spells it.
+    let utn57 = "\u{182E}\u{1833}\u{180C}\u{182D}\u{180C}\u{182C}\u{180B}\u{1823}\u{182F}";
     let output = meco()
-        .args(["translate", "--from", "utn57", "--to", "z52", "\u{1820}"])
+        .args(["translate", "--from", "utn57", "--to", "delehi", utn57])
+        .output()
+        .expect("meco command should run");
+
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(output.stdout, "\u{182E}\u{1823}\u{1829}\u{182D}\u{1823}\u{182F}".as_bytes());
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn still_rejects_oyun_as_a_source() {
+    let output = meco()
+        .args(["translate", "--from", "oyun", "--to", "z52", "\u{1820}"])
         .output()
         .expect("meco command should run");
 
     assert!(!output.status.success());
     assert!(output.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("conversion not supported for Utn57"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("conversion not supported for Oyun"));
 }
 
 #[test]

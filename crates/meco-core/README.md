@@ -1,8 +1,8 @@
 # meco-core
 
 `meco-core` is the pure-Rust engine for the Mongolian Encoding Converter. It converts among
-`Zvvnmod`, `Delehi`, `MenkShape`, `MenkLetter`, and `Z52`, and emits canonical UTN #57 Unicode as
-an output-only target; conversions route through the Zvvnmod hub. Everything runs in process with
+`Zvvnmod`, `Delehi`, `MenkShape`, `MenkLetter`, `Z52`, and canonical UTN #57 Unicode in both
+directions; conversions route through the Zvvnmod hub. Everything runs in process with
 no I/O, so the crate builds for `wasm32-unknown-unknown` as well as native targets. The minimum
 supported Rust version is 1.82.
 
