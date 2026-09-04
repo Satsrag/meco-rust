@@ -47,10 +47,10 @@ MenkLetter 和 Delehi 使用很多相同的 Unicode 码位，但上下文解释�
 
 ### 安装普通 CLI
 
-从 crates.io 安装已经发布的 `meco-core 0.4.0`：
+从 crates.io 安装已经发布的 `meco-core 0.4.1`：
 
 ```sh
-cargo install meco-core --version 0.4.0 --locked
+cargo install meco-core --version 0.4.1 --locked
 ```
 
 检查安装结果：
@@ -63,7 +63,7 @@ meco --help
 正确的版本输出是：
 
 ```text
-meco 0.4.0
+meco 0.4.1
 ```
 
 ### 直接转换一段文本
@@ -150,14 +150,14 @@ meco translate --from utn57 --to z52 '...'
 添加默认的纯 Rust library：
 
 ```sh
-cargo add meco-core@0.4.0
+cargo add meco-core@0.4.1
 ```
 
 也可以直接修改 `Cargo.toml`：
 
 ```toml
 [dependencies]
-meco-core = "0.4.0"
+meco-core = "0.4.1"
 ```
 
 调用转换 API：
@@ -187,7 +187,7 @@ let output = translate(CodeType::MenkLetter, CodeType::Utn57, input)?;
 
 ## 预编译 Release 包
 
-从 [v0.4.0 Release](https://github.com/Satsrag/meco-rust/releases/tag/v0.4.0) 下载。
+从 [v0.4.1 Release](https://github.com/Satsrag/meco-rust/releases/tag/v0.4.1) 下载。
 
 | 平台 | Release asset |
 |---|---|
@@ -199,8 +199,8 @@ let output = translate(CodeType::MenkLetter, CodeType::Utn57, input)?;
 | iOS Swift | `MecoSwift.xcframework.zip` |
 | Apple C ABI | `MecoC.xcframework.zip` |
 | Android | `meco-android-release.aar` |
-| 浏览器/WebAssembly | `meco-wasm-web-0.4.0.tgz` |
-| Node.js/WebAssembly | `meco-wasm-nodejs-0.4.0.tgz` |
+| 浏览器/WebAssembly | `meco-wasm-web-0.4.1.tgz` |
+| Node.js/WebAssembly | `meco-wasm-nodejs-0.4.1.tgz` |
 
 C 压缩包包含对应平台的 header、静态库和动态库。Go、Python、PHP、Java、Dart 等运行时可以加载 C ABI。Swift、Android、浏览器和 Node.js 使用各自的专用包。
 
