@@ -290,3 +290,69 @@ jobs:
             artifacts/meco-wasm-npm/*.tgz
             artifacts/meco-apple/*.zip
             artifacts/meco-android-aar/*.aar
+
+  # Publish the browser converter to the tools site.
+  #
+  # Runs after `release`, so the page never advertises a version whose artifacts failed to build,
+  # and it is the same `build.sh` a human would run — one way to build the page, not two.
+  #
+  # Needs a deploy key because GITHUB_TOKEN cannot reach another repository: generate one, put the
+  # public half on Satsrag/satsrag.github.io as a deploy key *with write access*, and the private
+  # half here as the PAGE_DEPLOY_KEY secret. Without it the job says so and skips rather than
+  # failing a release that is otherwise complete.
+  deploy-page:
+    needs: [release]
+    if: github.repository == 'Satsrag/meco-rust'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - name: Check for the deploy key
+        id: key
+        env:
+          DEPLOY_KEY: ${{ secrets.PAGE_DEPLOY_KEY }}
+        run: |
+          if [ -n "$DEPLOY_KEY" ]; then
+            echo 'present=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'present=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::PAGE_DEPLOY_KEY is not set - skipping the page deploy.'
+          fi
+      # The site is checked out first on purpose: its convert/fonts are already committed, and
+      # build.sh only fetches a font it does not find, so a release does not depend on the font
+      # hosts being up.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          repository: Satsrag/satsrag.github.io
+          path: site
+          ssh-key: ${{ secrets.PAGE_DEPLOY_KEY }}
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+        if: steps.key.outputs.present == 'true'
+        with: { targets: "wasm32-unknown-unknown" }
+      - name: Install wasm-bindgen at the version the lockfile pins
+        if: steps.key.outputs.present == 'true'
+        run: |
+          set -euo pipefail
+          version=$(cargo metadata --format-version 1 --locked \
+            | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version' | head -1)
+          # The CLI and the crate must match exactly or the generated glue does not load.
+          cargo install wasm-bindgen-cli --version "$version" --locked
+      - name: Build the page into the site checkout
+        if: steps.key.outputs.present == 'true'
+        run: bash crates/meco-wasm/web/build.sh "$GITHUB_WORKSPACE/site/convert"
+      - name: Commit and push if anything moved
+        if: steps.key.outputs.present == 'true'
+        working-directory: site
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain)" ]; then
+            echo 'The published page already matches this release.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add convert
+          git commit -m "deploy(convert): meco ${GITHUB_REF_NAME#v}" \
+            -m "Built from Satsrag/meco-rust crates/meco-wasm/web at ${GITHUB_REF_NAME}."
+          git push
