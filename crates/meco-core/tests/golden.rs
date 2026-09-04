@@ -170,12 +170,40 @@ fn strict_z52_target_expected(row: &Row, base: &str) -> Option<String> {
 
 /// Byte-exact parity vs the Java oracle for every (from,to) among the IMPLEMENTED encodings.
 /// Covers the urgent Z52<->MenkShape plus all Delehi<->{Zvvnmod,Z52,Menk_Shape} cross paths.
+const HUB_CONNECTOR_ROWS: usize = 125;
+
+/// The one place the hub deliberately departs from the Java oracle.
+///
+/// A detached suffix used to reach the Zvvnmod hub as an ordinary space, indistinguishable from the
+/// gap between two words. It is NNBSP now, so the distinction survives the hub and `zvvnmod-utn57`
+/// can carry it to MVS and back. Rather than drop these rows, the oracle's expectation is rewritten
+/// for exactly that substitution: same length, and only a space the oracle emitted may become
+/// NNBSP. It reaches letter targets too, because the oracle flattened the boundary on the way
+/// through the hub and so lost it from its own output as well. A dropped boundary, an extra one, or any other character still fails, and the number of
+/// rows allowed to take this path is pinned below.
+fn hub_connector_expected(r: &Row, base: &str, got: &str) -> Option<String> {
+    if !r.input.contains('\u{202f}') {
+        return None;
+    }
+    let mut expected = String::with_capacity(base.len());
+    let mut actual = got.chars();
+    for b in base.chars() {
+        let a = actual.next()?;
+        expected.push(if b == ' ' && a == '\u{202f}' { '\u{202f}' } else { b });
+    }
+    if actual.next().is_some() {
+        return None; // lengths differ: not this divergence
+    }
+    Some(expected)
+}
+
 #[test]
 fn parity_implemented_paths() {
     let rows = load();
     let mut checked = 0usize;
     let mut zvvnmod_policy_rows = 0usize;
     let mut strict_z52_policy_rows = 0usize;
+    let mut hub_connector_rows = 0usize;
     for r in &rows {
         if !IMPLEMENTED.contains(&r.from.as_str()) || !IMPLEMENTED.contains(&r.to.as_str()) {
             continue;
@@ -197,6 +225,14 @@ fn parity_implemented_paths() {
             strict_z52_policy_rows += 1;
         }
         let expected = strict_z52_expected.as_deref().unwrap_or(base_expected);
+        let connector_expected = hub_connector_expected(r, expected, &got);
+        let expected = match &connector_expected {
+            Some(e) if e.as_str() != expected => {
+                hub_connector_rows += 1;
+                e.as_str()
+            }
+            _ => expected,
+        };
         assert_eq!(
             got,
             expected,
@@ -212,6 +248,10 @@ fn parity_implemented_paths() {
     // Every implemented row is checked; Rust policy rows are transformed exactly, never skipped.
     assert_eq!(checked, 11_492, "implemented-path row count changed");
     assert_eq!(zvvnmod_policy_rows, 20, "Zvvnmod policy corpus changed");
+    assert_eq!(
+        hub_connector_rows, HUB_CONNECTOR_ROWS,
+        "the hub's NNBSP boundary spread to a different number of oracle rows"
+    );
     assert_eq!(
         strict_z52_policy_rows, 729,
         "strict Z52 punctuation corpus changed"

@@ -6,7 +6,9 @@
 
 use crate::code_mapper::StaticMap;
 use crate::error::MecoError;
-use crate::letter::rule::{LetterTranslateRuleFrom, LetterTranslateRuleTo};
+use crate::letter::rule::{
+    ends_with_boundary, LetterTranslateRuleFrom, LetterTranslateRuleTo, WORD_CONNECTOR,
+};
 use crate::tables::from_menk_letter::{
     FROM_MENK_LETTER, FROM_MENK_LETTER_CHAGH, FROM_MENK_LETTER_HUNDII, FROM_MENK_LETTER_SAARMAG,
     FROM_MENK_LETTER_W_WITH_EHSHIG,
@@ -176,7 +178,7 @@ impl LetterTranslateRuleTo for MenkLetterTo {
             };
             s = concat_and_202f(&s, &s1);
         }
-        if s.starts_with('\u{202f}') && builder.ends_with('\u{20}') {
+        if s.starts_with(WORD_CONNECTOR) && ends_with_boundary(builder) {
             builder.pop();
         }
         builder.push_str(&s);
@@ -246,8 +248,9 @@ fn resolve_single_gii_and_ue011(pre: &str, s: &str) -> Option<&'static str> {
 }
 
 fn concat_and_202f(s0: &str, s1: &str) -> String {
-    if s1.starts_with('\u{202f}') && s0.ends_with('\u{20}') {
-        let trimmed = &s0[..s0.len() - 1];
+    if s1.starts_with(WORD_CONNECTOR) && ends_with_boundary(s0) {
+        let mut trimmed = s0.to_owned();
+        trimmed.pop(); // char-aware: the boundary is a 1-byte space or a 3-byte NNBSP
         format!("{trimmed}{s1}")
     } else {
         format!("{s0}{s1}")

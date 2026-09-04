@@ -5,12 +5,70 @@ use meco_core::{translate, CodeType, MecoError};
 
 #[test]
 fn passthrough_text_reaches_utn57_unchanged() {
-    let input = "plain\u{180A}\u{180E}\u{202F}\u{200D}";
+    // NNBSP is no longer in this list: it is the hub's suffix boundary now, and it converts.
+    let input = "plain\u{180A}\u{180E}\u{200D}";
 
     assert_eq!(
         translate(CodeType::Zvvnmod, CodeType::Utn57, input).unwrap(),
         input
     );
+}
+
+#[test]
+fn the_hub_boundary_becomes_an_mvs() {
+    assert_eq!(
+        translate(CodeType::Zvvnmod, CodeType::Utn57, "\u{E00D}\u{202F}\u{E04D}").unwrap(),
+        translate(CodeType::Zvvnmod, CodeType::Utn57, "\u{E00D}").unwrap()
+            + "\u{180E}"
+            + &translate(CodeType::Zvvnmod, CodeType::Utn57, "\u{E04D}").unwrap(),
+    );
+}
+
+/// ᠲᠠᠯ᠎ᠠ᠎ᠶᠢᠨ — a chachlag A and then a detached suffix, the case from Satsrag/meco-rust#22.
+///
+/// Both separators are MVS in UTN #57 but mean different things: the first belongs to the chachlag
+/// and folds into a single hub code, the second is a suffix boundary and must survive as one. The
+/// legacy spelling distinguishes them itself, MVS against NNBSP, so the two sources are a genuine
+/// cross-check rather than a round trip through one implementation.
+#[test]
+fn utn57_and_delehi_sources_agree_on_the_hub() {
+    let utn57 = "\u{1832}\u{1820}\u{182F}\u{180E}\u{1820}\u{180E}\u{1836}\u{1822}\u{1828}";
+    let delehi = "\u{1832}\u{1820}\u{182F}\u{180E}\u{1820}\u{202F}\u{1836}\u{1822}\u{1828}";
+
+    let from_delehi = translate(CodeType::Delehi, CodeType::Zvvnmod, delehi).unwrap();
+    assert_eq!(
+        from_delehi,
+        "\u{E042}\u{E005}\u{E03B}\u{E00D}\u{202F}\u{E04D}\u{E006}\u{E00C}",
+        "the chachlag folds into one code and the suffix boundary stays as NNBSP"
+    );
+    assert_eq!(
+        translate(CodeType::Utn57, CodeType::Zvvnmod, utn57).unwrap(),
+        from_delehi,
+        "both sources must reach the same hub"
+    );
+
+    for target in [CodeType::MenkLetter, CodeType::MenkShape, CodeType::Z52] {
+        assert_eq!(
+            translate(CodeType::Utn57, target, utn57).unwrap(),
+            translate(CodeType::Delehi, target, delehi).unwrap(),
+            "{target:?} must not depend on which source the word came from"
+        );
+    }
+}
+
+#[test]
+fn the_boundary_is_not_doubled_on_the_way_out() {
+    let hub = "\u{E042}\u{E005}\u{E03B}\u{E00D}\u{202F}\u{E04D}\u{E006}\u{E00C}";
+    for target in [CodeType::Delehi, CodeType::MenkLetter] {
+        let out = translate(CodeType::Zvvnmod, target, hub).unwrap();
+        assert_eq!(out.matches('\u{202F}').count(), 1, "{target:?}: {out:?}");
+    }
+    // The shape encodings have no NNBSP of their own and keep the ordinary space they always had.
+    for target in [CodeType::MenkShape, CodeType::Z52] {
+        let out = translate(CodeType::Zvvnmod, target, hub).unwrap();
+        assert!(!out.contains('\u{202F}'), "{target:?}: {out:?}");
+        assert_eq!(out.matches(' ').count(), 1, "{target:?}: {out:?}");
+    }
 }
 
 #[test]
