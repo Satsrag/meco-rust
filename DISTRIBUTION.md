@@ -9,13 +9,13 @@ and the per-language packages sit at the repo root, like `meco_php`/`meco_dart` 
 
 | Platform | Add to a project | Backed by |
 |---|---|---|
-| **Desktop / server CLI** | `cargo install meco-core --version 0.4.1 --locked` | `meco-core` binary + library |
+| **Desktop / server CLI** | `cargo install meco-core --version 0.4.2 --locked` | `meco-core` binary + library |
 | **PHP** (server) | `composer require zvvnmod/meco` | `meco-cabi` C ABI via FFI |
 | **Browser / web bundler** | Install `meco-wasm-web-*.tgz` from the GitHub Release | `meco-wasm` (wasm-bindgen web target) |
 | **Node.js** | Install `meco-wasm-nodejs-*.tgz` from the GitHub Release | `meco-wasm` (wasm-bindgen nodejs target) |
 | **iOS** (SwiftPM) | Download `MecoSwift.xcframework.zip` from the GitHub Release | `meco-uniffi` (Swift) |
 | **iOS** (CocoaPods) | `pod 'Meco'` | `meco-uniffi` (Swift) |
-| **Android** (Gradle) | `implementation("com.zvvnmod:meco-android:0.4.1")` | `meco-uniffi` (Kotlin) |
+| **Android** (Gradle) | `implementation("com.zvvnmod:meco-android:0.4.2")` | `meco-uniffi` (Kotlin) |
 | **Go / Java / Python…** | load `libmeco.{so,dylib}` (cgo / Panama-JNI / ctypes) | `meco-cabi` C ABI |
 
 Usage is the same everywhere: `translate(from, to, input)` with names
@@ -64,7 +64,7 @@ Release assets; those ecosystem registries remain separate follow-up steps.
 Rust consumers get the UTN #57 target through the normal core API with no feature flag:
 
 ```toml
-meco-core = "0.4.1"
+meco-core = "0.4.2"
 ```
 
 The pure-Rust `zvvnmod-utn57` backend is a regular dependency, so `cargo publish` and downstream

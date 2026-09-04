@@ -105,7 +105,7 @@ body:
       description: meco-core version, browser or CLI, whether the fonts loaded. / meco-core 版本、浏览器或 CLI、字体加载情况。
       render: text
       placeholder: |
-        core: 0.4.1 (wasm)
+        core: 0.4.2 (wasm)
         page: https://www.satsrag.dev/convert/
         fonts: delehi=loaded zvvn mod=loaded utn57=loaded
         ua: Mozilla/5.0 …

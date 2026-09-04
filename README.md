@@ -49,10 +49,10 @@ Install Rust with [rustup](https://rustup.rs/) if `cargo --version` is unavailab
 
 ### Standard CLI
 
-Install the published `meco-core 0.4.1` crate:
+Install the published `meco-core 0.4.2` crate:
 
 ```sh
-cargo install meco-core --version 0.4.1 --locked
+cargo install meco-core --version 0.4.2 --locked
 ```
 
 Check the installation:
@@ -65,7 +65,7 @@ meco --help
 Expected version:
 
 ```text
-meco 0.4.1
+meco 0.4.2
 ```
 
 ### Convert text from an argument
@@ -153,14 +153,14 @@ They are different source conventions even though both use Unicode Mongolian let
 Add the default, pure Rust library:
 
 ```sh
-cargo add meco-core@0.4.1
+cargo add meco-core@0.4.2
 ```
 
 Or add it to `Cargo.toml`:
 
 ```toml
 [dependencies]
-meco-core = "0.4.1"
+meco-core = "0.4.2"
 ```
 
 Convert text:
@@ -190,7 +190,7 @@ No Cargo feature is required. The `utn57-command` feature name is still accepted
 
 ## Prebuilt release packages
 
-Download packages from the [v0.4.1 release](https://github.com/Satsrag/meco-rust/releases/tag/v0.4.1).
+Download packages from the [v0.4.2 release](https://github.com/Satsrag/meco-rust/releases/tag/v0.4.2).
 
 | Platform | Release asset |
 |---|---|
@@ -202,8 +202,8 @@ Download packages from the [v0.4.1 release](https://github.com/Satsrag/meco-rust
 | iOS Swift | `MecoSwift.xcframework.zip` |
 | Apple C ABI | `MecoC.xcframework.zip` |
 | Android | `meco-android-release.aar` |
-| Browser/WebAssembly | `meco-wasm-web-0.4.1.tgz` |
-| Node.js/WebAssembly | `meco-wasm-nodejs-0.4.1.tgz` |
+| Browser/WebAssembly | `meco-wasm-web-0.4.2.tgz` |
+| Node.js/WebAssembly | `meco-wasm-nodejs-0.4.2.tgz` |
 
 The C archives include the header and static/dynamic libraries for the target. Go, Python, PHP, Java, Dart, and other runtimes can load the C ABI. Swift, Android, browser, and Node.js have dedicated packages.
 
