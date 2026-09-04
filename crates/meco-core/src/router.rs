@@ -9,6 +9,7 @@ use crate::code_type::{CodeSeries, CodeType};
 use crate::dispatch::{letter_from_rule, letter_to_rule, shape_from_rule, shape_to_rule};
 use crate::error::MecoError;
 use crate::letter::from_translator::LetterFromTranslator;
+use crate::letter::rule::WORD_CONNECTOR;
 use crate::letter::to_translator::LetterToTranslator;
 use crate::shape::translator::ShapeTranslator;
 use crate::strings;
@@ -52,7 +53,12 @@ fn translate_to(ct: CodeType, s: &str) -> Result<String, MecoError> {
             .map_err(|error| MecoError::Utn57(error.to_string()));
     }
     match ct.code_series() {
-        CodeSeries::Shape => ShapeTranslator::new(shape_to_rule(ct)?).translate(s),
+        // The shape encodings have no NNBSP of their own: they spell a suffix boundary with an
+        // ordinary space and always have, so the hub's connector is flattened back for them.
+        CodeSeries::Shape => {
+            let flattened = s.replace(WORD_CONNECTOR, " ");
+            ShapeTranslator::new(shape_to_rule(ct)?).translate(&flattened)
+        }
         CodeSeries::Letter => LetterToTranslator::new(letter_to_rule(ct)?).translate(s),
     }
 }

@@ -3,7 +3,9 @@
 
 use crate::code_mapper::StaticMap;
 use crate::error::MecoError;
-use crate::letter::rule::{LetterTranslateRuleFrom, LetterTranslateRuleTo};
+use crate::letter::rule::{
+    ends_with_boundary, LetterTranslateRuleFrom, LetterTranslateRuleTo, WORD_CONNECTOR,
+};
 use crate::tables::from_delehi::{
     FROM_DELEHI, FROM_DELEHI_CHAGH, FROM_DELEHI_HUNDII, FROM_DELEHI_SAARMAG,
 };
@@ -106,7 +108,7 @@ impl LetterTranslateRuleTo for DelehiTo {
             }
         }
         // Cross-word merge: leading NNBSP collapses a trailing space already in the builder.
-        if s.starts_with('\u{202f}') && builder.ends_with('\u{20}') {
+        if s.starts_with(WORD_CONNECTOR) && ends_with_boundary(builder) {
             builder.pop();
         }
         builder.push_str(&s);
@@ -140,8 +142,9 @@ fn get_delehi(pre_letter_codes: &str, key: &str) -> Option<String> {
 
 // concatAnd202f: a leading NNBSP in s1 collapses a trailing space at the end of s0.
 fn concat_and_202f(s0: &str, s1: &str) -> String {
-    if s1.starts_with('\u{202f}') && s0.ends_with('\u{20}') {
-        let trimmed = &s0[..s0.len() - 1]; // the trailing char is ASCII space (1 byte)
+    if s1.starts_with(WORD_CONNECTOR) && ends_with_boundary(s0) {
+        let mut trimmed = s0.to_owned();
+        trimmed.pop(); // char-aware: the boundary is a 1-byte space or a 3-byte NNBSP
         format!("{trimmed}{s1}")
     } else {
         format!("{s0}{s1}")

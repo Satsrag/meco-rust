@@ -5,7 +5,7 @@
 //! next fragment), and per-fragment Nature that resolves against the word nature in `translate_word`.
 
 use crate::error::MecoError;
-use crate::letter::rule::LetterTranslateRuleFrom;
+use crate::letter::rule::{LetterTranslateRuleFrom, WORD_CONNECTOR};
 use crate::strings;
 use crate::word::char_type::CharType;
 use crate::word::letter_word::{LetterWord, LetterWordFragment};
@@ -105,12 +105,31 @@ impl LetterFromTranslator {
             } else {
                 &[]
             };
-            match self.rule.get_mapper_code(&pre, suf, &wf.get_key(), nature) {
-                Some(s) => builder.push_str(s),
-                None => return Err(MecoError::NotFoundInMapper(wf.get_key())),
+            let key = wf.get_key();
+            match self.rule.get_mapper_code(&pre, suf, &key, nature) {
+                Some(s) => push_mapped(builder, &key, s),
+                None => return Err(MecoError::NotFoundInMapper(key)),
             }
             pre.extend(wf.content());
         }
         Ok(())
     }
+}
+
+/// Emit one mapped fragment, restoring the suffix boundary the tables flatten.
+///
+/// Those tables were generated when the hub spelled a suffix boundary as an ordinary space: every
+/// entry whose key carries the word connector puts that boundary at the head of its value as a
+/// leading space, and nothing else does. So a key with the connector is exactly the case where that
+/// leading space is the boundary rather than a word gap, and it goes back to NNBSP here instead of
+/// requiring the generated tables to be rebuilt.
+fn push_mapped(builder: &mut String, key: &str, mapped: &str) {
+    if key.contains(WORD_CONNECTOR) {
+        if let Some(rest) = mapped.strip_prefix(' ') {
+            builder.push(WORD_CONNECTOR);
+            builder.push_str(rest);
+            return;
+        }
+    }
+    builder.push_str(mapped);
 }
