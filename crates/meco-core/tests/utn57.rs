@@ -207,3 +207,30 @@ fn utn57_error_variant_display_is_stable() {
         "UTN #57 conversion failed: backend unavailable"
     );
 }
+
+/// ᠠᠪᠤᠭᠰᠠᠨ — a bowed unit followed by teeth, the case from Satsrag/meco-rust#26.
+///
+/// Through zvvnmod-utn57 0.1.2 the hub's `B_O_MEDI A_MEDI` came out as `B` + nirugu + `Dd`, the
+/// composite written unit that spells `O A` a second way and renders as a separate loop after the
+/// bowl. mongol-norm 0.2.0 folds that duplicate out, so the spelling is `B O` with the teeth kept
+/// as teeth and no `Dd` (U+1833) anywhere.
+#[test]
+fn a_bowl_before_teeth_is_spelled_b_o_not_dd() {
+    let hub = "\u{E000}\u{E005}\u{E083}\u{E005}\u{E005}\u{E03D}\u{E005}\u{E00C}";
+    let out = translate(CodeType::Zvvnmod, CodeType::Utn57, hub).unwrap();
+
+    assert_eq!(
+        out,
+        "\u{1820}\u{180B}\u{1820}\u{182A}\u{1823}\u{1820}\u{1820}\u{1830}\u{1820}\u{1820}\u{180C}"
+    );
+    assert!(!out.contains('\u{1833}'), "no Dd in {out:?}");
+    // The same word arriving as letters lands on the same spelling, and it decodes back to the hub.
+    assert_eq!(
+        translate(CodeType::MenkLetter, CodeType::Utn57, "ᠠᠪᠤᠭᠰᠠᠨ").unwrap(),
+        out
+    );
+    assert_eq!(
+        translate(CodeType::Utn57, CodeType::Zvvnmod, &out).unwrap(),
+        hub
+    );
+}
