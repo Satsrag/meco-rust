@@ -1,5 +1,6 @@
 //! Port of `shape/to/menk/MenkShapeTranslateRuleTo.java`. Zvvnmod -> Menk-shape. Keys on `get_key`.
-//! The only stateful shape rule: `reslove_tsatslaga` overrides the key "" to "" when the
+//! Two decisions here are not in the Java tables: `space_before_middle_dot`, and the only stateful
+//! shape rule, `reslove_tsatslaga`, which overrides the key "" to "" when the
 //! immediately preceding fragment ended in a Zvvnmod tail code (depends on prior fragment content).
 
 use crate::code_mapper::StaticMap;
@@ -32,6 +33,9 @@ impl ShapeTranslateRule for MenkShapeTo {
         if let Some(r) = reslove_tsatslaga(pre, &key) {
             return Some(r);
         }
+        if let Some(r) = space_before_middle_dot(pre, &key) {
+            return Some(r);
+        }
         MAP.get(&key)
     }
 
@@ -50,4 +54,13 @@ fn reslove_tsatslaga(pre: &[char], key: &str) -> Option<&'static str> {
     } else {
         None
     }
+}
+
+/// Menksoft's punctuation glyphs carry no side bearing, so a middle dot set straight after a word
+/// sits on the last stroke's ink; Menksoft text writes a space before it (Satsrag/meco-rust#29).
+/// The Java table maps `·` to a bare E243. Only a dot that continues a word gets the space: at the
+/// head of one, whatever preceded it in the text — a space, a line start, Latin — already
+/// separates it.
+fn space_before_middle_dot(pre: &[char], key: &str) -> Option<&'static str> {
+    (key == "\u{b7}" && !pre.is_empty()).then_some(" \u{e243}")
 }
