@@ -83,19 +83,22 @@ fn escape(s: &str) -> String {
 // Encodings whose Rust port is complete — now all five, so this is the FULL matrix.
 const IMPLEMENTED: [&str; 5] = ["Zvvnmod", "Z52", "Menk_Shape", "Delehi", "Menk_Letter"];
 
+/// The hub spells the nirugu with ZVVNMOD's own code, E0E5, not Unicode's U+180A: the UTN #57
+/// crate uses that code and every source now agrees on it (Satsrag/meco-rust#29). Java dropped
+/// the nirugu outright in these rows, so they were already deliberate divergences.
 fn zvvnmod_rust_expected(row: &Row) -> Option<&'static str> {
     if row.from != "Delehi" {
         return None;
     }
 
     match (row.to.as_str(), row.input.as_str()) {
-        ("Zvvnmod", "\u{1826}\u{180a}") => Some("\u{e000}\u{e008}\u{e006}\u{180a}"),
+        ("Zvvnmod", "\u{1826}\u{180a}") => Some("\u{e000}\u{e008}\u{e006}\u{e0e5}"),
         ("Menk_Letter", "\u{1826}\u{180a}") => Some("\u{1826}\u{180a}"),
         ("Menk_Shape", "\u{1826}\u{180a}") => Some("\u{e271}\u{e291}\u{e27e}\u{e23e}"),
         ("Z52", "\u{1826}\u{180a}") => Some("\u{1865}\u{186d}\u{186c}\u{180a}"),
 
         ("Zvvnmod", "\u{180a}\u{1833}\u{1824}\u{182d}\u{1820}\u{1837}") =>
-            Some("\u{180a}\u{e046}\u{e008}\u{e028}\u{e028}\u{e005}\u{e055}"),
+            Some("\u{e0e5}\u{e046}\u{e008}\u{e028}\u{e028}\u{e005}\u{e055}"),
         ("Menk_Letter", "\u{180a}\u{1833}\u{1824}\u{182d}\u{1820}\u{1837}") =>
             Some("\u{180a}\u{1833}\u{180b}\u{1823}\u{182d}\u{1820}\u{1837}"),
         ("Menk_Shape", "\u{180a}\u{1833}\u{1824}\u{182d}\u{1820}\u{1837}") =>
@@ -104,7 +107,7 @@ fn zvvnmod_rust_expected(row: &Row) -> Option<&'static str> {
             Some("\u{180a}\u{1899}\u{186d}\u{1871}\u{1871}\u{186a}\u{189d}"),
 
         ("Zvvnmod", "\u{1832}\u{1820}\u{182a}\u{1824}\u{180a}\u{1833}\u{1824}\u{182d}\u{1820}\u{1822}") =>
-            Some("\u{e042}\u{e005}\u{e083}\u{180a}\u{e046}\u{e008}\u{e028}\u{e028}\u{e005}\u{e00e}"),
+            Some("\u{e042}\u{e005}\u{e083}\u{e0e5}\u{e046}\u{e008}\u{e028}\u{e028}\u{e005}\u{e00e}"),
         ("Menk_Letter", "\u{1832}\u{1820}\u{182a}\u{1824}\u{180a}\u{1833}\u{1824}\u{182d}\u{1820}\u{1822}") =>
             Some("\u{1832}\u{1820}\u{182a}\u{1823}\u{180a}\u{1833}\u{180b}\u{1823}\u{182d}\u{1820}\u{1822}"),
         ("Menk_Shape", "\u{1832}\u{1820}\u{182a}\u{1824}\u{180a}\u{1833}\u{1824}\u{182d}\u{1820}\u{1822}") =>
@@ -113,7 +116,7 @@ fn zvvnmod_rust_expected(row: &Row) -> Option<&'static str> {
             Some("\u{1898}\u{186a}\u{1874}\u{186d}\u{180a}\u{1899}\u{186d}\u{1871}\u{1871}\u{186a}\u{186b}"),
 
         ("Zvvnmod", "\u{1832}\u{1820}\u{182a}\u{1824}\u{180a}") =>
-            Some("\u{e042}\u{e005}\u{e083}\u{180a}"),
+            Some("\u{e042}\u{e005}\u{e083}\u{e0e5}"),
         ("Menk_Letter", "\u{1832}\u{1820}\u{182a}\u{1824}\u{180a}") =>
             Some("\u{1832}\u{1820}\u{182a}\u{1823}\u{180a}"),
         ("Menk_Shape", "\u{1832}\u{1820}\u{182a}\u{1824}\u{180a}") =>
@@ -122,7 +125,7 @@ fn zvvnmod_rust_expected(row: &Row) -> Option<&'static str> {
             Some("\u{1898}\u{186a}\u{1874}\u{186d}\u{180a}"),
 
         ("Zvvnmod", "* \u{1832}\u{1820}\u{182a}\u{1824}\u{180a}\u{180b}") =>
-            Some("* \u{e042}\u{e005}\u{e083}\u{180a}\u{e140}"),
+            Some("* \u{e042}\u{e005}\u{e083}\u{e0e5}\u{e140}"),
         ("Menk_Letter", "* \u{1832}\u{1820}\u{182a}\u{1824}\u{180a}\u{180b}") =>
             Some("* \u{1832}\u{1820}\u{182a}\u{1823}\u{180a}\u{180b}"),
         ("Menk_Shape", "* \u{1832}\u{1820}\u{182a}\u{1824}\u{180a}\u{180b}") =>
@@ -197,6 +200,111 @@ fn hub_connector_expected(r: &Row, base: &str, got: &str) -> Option<String> {
     Some(expected)
 }
 
+/// The 18 Menksoft marks that take the punctuation gap before them, plus the middle dot, which
+/// takes both.
+const MENK_GAP_BEFORE: &[char] = &[
+    '\u{e235}', '\u{e236}', '\u{e237}', '\u{e238}', '\u{e239}', '\u{e23c}', '\u{e23d}', '\u{e243}',
+    '\u{e24e}', '\u{e24f}', '\u{e250}', '\u{e251}', '\u{e252}', '\u{e253}', '\u{e255}', '\u{e257}',
+    '\u{e259}', '\u{e25b}', '\u{e25d}',
+];
+
+/// The 5 closing brackets that take it after them, plus `·`.
+const MENK_GAP_AFTER: &[char] = &[
+    '\u{e243}', '\u{e254}', '\u{e256}', '\u{e258}', '\u{e25a}', '\u{e25c}',
+];
+
+/// The 11 marks Z52 spells with its own code points that take the gap before them, plus the middle
+/// dot. The 10 Mongolian marks Z52 passes through as Unicode already carry an 18.3-19.5 % em
+/// bearing in `z52.otf` and are absent here.
+const Z52_GAP_BEFORE: &[char] = &[
+    '\u{184f}', '\u{1850}', '\u{1851}', '\u{1852}', '\u{1853}', '\u{1854}', '\u{1855}', '\u{1857}',
+    '\u{1859}', '\u{185b}', '\u{185d}', '\u{185f}',
+];
+
+/// The 5 closing brackets Z52 spells with its own code points, plus the middle dot.
+const Z52_GAP_AFTER: &[char] = &[
+    '\u{184f}', '\u{1856}', '\u{1858}', '\u{185a}', '\u{185c}', '\u{185e}',
+];
+
+/// Rows allowed to differ from the oracle by the punctuation gap: every row whose target is a
+/// shape encoding and whose text carries one of the marks that take it.
+const PUNCTUATION_GAP_ROWS: usize = 1860;
+
+/// Drop one gap-or-space sitting on the side a Menksoft mark takes.
+///
+/// Applied to both sides of the comparison, this is what "differs only by the punctuation gap"
+/// means: anything else — a dropped mark, a changed letter, a space anywhere the marks do not
+/// reach — survives and still has to match.
+fn without_punctuation_gap(text: &str, to: &str) -> String {
+    let (before, after, space) = match to {
+        "Menk_Shape" => (MENK_GAP_BEFORE, MENK_GAP_AFTER, '\u{e263}'),
+        "Z52" => (Z52_GAP_BEFORE, Z52_GAP_AFTER, '\u{202f}'),
+        _ => return text.to_string(),
+    };
+    let chars: Vec<char> = text.chars().collect();
+    let mut out: Vec<char> = Vec::with_capacity(chars.len());
+    let mut index = 0;
+    while index < chars.len() {
+        let c = chars[index];
+        if before.contains(&c) && out.last().is_some_and(|&p| p == space || p == ' ') {
+            out.pop();
+        }
+        out.push(c);
+        if after.contains(&c)
+            && chars
+                .get(index + 1)
+                .is_some_and(|&n| n == space || n == ' ')
+        {
+            index += 1;
+        }
+        index += 1;
+    }
+    out.into_iter().collect()
+}
+
+/// The second place shape output deliberately departs from the Java oracle.
+///
+/// Menksoft's punctuation glyphs carry no side bearing — every mark in `E234..=E261` measures
+/// 0.0–0.7 % of an em on both sides in MenksoftQagan_shape.ttf — so a mark set straight after a
+/// word sits on the last stroke's ink. The gap is now written in with Menksoft's own space,
+/// on the side each mark takes — Menksoft's own `U+E263` for MenkShape, the narrow no-break space
+/// `U+202F` for Z52, whose 19.5 % em in `z52.otf` is exactly the bearing that font gives its own
+/// Mongolian marks. The oracle is not merely missing the gap: it is inconsistent about it, writing
+/// `\u{180b}\u{e236}` for one comma and `\u{180b} \u{e236}` for the next in the same line. Both
+/// readings normalize to the same text here.
+fn punctuation_gap_expected(r: &Row, base: &str, got: &str) -> Option<String> {
+    if !matches!(r.to.as_str(), "Menk_Shape" | "Z52") || got == base {
+        return None;
+    }
+    (without_punctuation_gap(got, &r.to) == without_punctuation_gap(base, &r.to))
+        .then(|| got.to_string())
+}
+
+#[test]
+fn the_gap_normalizer_only_touches_the_gap() {
+    let menk = |s: &str| without_punctuation_gap(s, "Menk_Shape");
+    let z52 = |s: &str| without_punctuation_gap(s, "Z52");
+    // A mark's own side is cleaned on both readings.
+    assert_eq!(menk("\u{e2b5}\u{e263}\u{e236}"), "\u{e2b5}\u{e236}");
+    assert_eq!(menk("\u{e2b5} \u{e236}"), "\u{e2b5}\u{e236}");
+    assert_eq!(menk("\u{e254}\u{e263}\u{e2b5}"), "\u{e254}\u{e2b5}");
+    assert_eq!(z52("\u{186b}\u{202f}\u{1852}"), "\u{186b}\u{1852}");
+    assert_eq!(z52("\u{1856}\u{202f}\u{1867}"), "\u{1856}\u{1867}");
+    // The side a mark does not take is left alone, and so is everything else.
+    assert_eq!(menk("\u{e236} \u{e2b5}"), "\u{e236} \u{e2b5}");
+    assert_eq!(menk("\u{e2b5} \u{e254}"), "\u{e2b5} \u{e254}");
+    assert_eq!(
+        menk("\u{e2b5} \u{e260} \u{e2b5}"),
+        "\u{e2b5} \u{e260} \u{e2b5}"
+    );
+    assert_eq!(menk("a b"), "a b");
+    // Z52 passes the Mongolian marks through as Unicode; they keep their spacing.
+    assert_eq!(z52("\u{186b} \u{1802}"), "\u{186b} \u{1802}");
+    // Neither table reaches into the other encoding's text.
+    assert_eq!(z52("\u{e2b5}\u{e263}\u{e236}"), "\u{e2b5}\u{e263}\u{e236}");
+    assert_eq!(menk("\u{186b}\u{202f}\u{1852}"), "\u{186b}\u{202f}\u{1852}");
+}
+
 #[test]
 fn parity_implemented_paths() {
     let rows = load();
@@ -204,6 +312,7 @@ fn parity_implemented_paths() {
     let mut zvvnmod_policy_rows = 0usize;
     let mut strict_z52_policy_rows = 0usize;
     let mut hub_connector_rows = 0usize;
+    let mut punctuation_gap_rows = 0usize;
     for r in &rows {
         if !IMPLEMENTED.contains(&r.from.as_str()) || !IMPLEMENTED.contains(&r.to.as_str()) {
             continue;
@@ -212,7 +321,12 @@ fn parity_implemented_paths() {
         let from: meco_core::CodeType = r.from.parse().unwrap();
         let to: meco_core::CodeType = r.to.parse().unwrap();
         let got = meco_core::translate(from, to, &r.input).unwrap_or_else(|e| {
-            panic!("{} -> {} errored ({e}) on input {}", r.from, r.to, escape(&r.input))
+            panic!(
+                "{} -> {} errored ({e}) on input {}",
+                r.from,
+                r.to,
+                escape(&r.input)
+            )
         });
         let base_expected = if let Some(expected) = zvvnmod_rust_expected(r) {
             zvvnmod_policy_rows += 1;
@@ -225,6 +339,14 @@ fn parity_implemented_paths() {
             strict_z52_policy_rows += 1;
         }
         let expected = strict_z52_expected.as_deref().unwrap_or(base_expected);
+        let gap_expected = punctuation_gap_expected(r, expected, &got);
+        let expected = match &gap_expected {
+            Some(e) => {
+                punctuation_gap_rows += 1;
+                e.as_str()
+            }
+            None => expected,
+        };
         let connector_expected = hub_connector_expected(r, expected, &got);
         let expected = match &connector_expected {
             Some(e) if e.as_str() != expected => {
@@ -251,6 +373,10 @@ fn parity_implemented_paths() {
     assert_eq!(
         hub_connector_rows, HUB_CONNECTOR_ROWS,
         "the hub's NNBSP boundary spread to a different number of oracle rows"
+    );
+    assert_eq!(
+        punctuation_gap_rows, PUNCTUATION_GAP_ROWS,
+        "punctuation-gap rows changed: {punctuation_gap_rows} vs {PUNCTUATION_GAP_ROWS}"
     );
     assert_eq!(
         strict_z52_policy_rows, 729,
