@@ -234,3 +234,21 @@ fn a_bowl_before_teeth_is_spelled_b_o_not_dd() {
         hub
     );
 }
+
+/// ᠠ᠋ᠠ᠊· — a word held open by a nirugu, then a middle dot, the case from Satsrag/meco-rust#29.
+///
+/// Two things went wrong on the way to Menk shape: the backend spells the hub's nirugu as ZVVNMOD's
+/// own E0E5, which the legacy tables did not know and passed through as a `.notdef` box, and the
+/// middle dot was set flush against the stroke where Menksoft writes a space before it.
+#[test]
+fn a_nirugu_and_a_middle_dot_reach_menk_shape() {
+    let out = translate(
+        CodeType::Utn57,
+        CodeType::MenkShape,
+        "\u{1820}\u{180B}\u{1820}\u{180A}\u{00B7}",
+    )
+    .unwrap();
+
+    assert_eq!(out, "\u{E271}\u{E26C}\u{E23E} \u{E243}");
+    assert!(!out.contains('\u{E0E5}'), "formal nirugu leaked: {out:?}");
+}
