@@ -21,7 +21,7 @@ let output = translate(CodeType::MenkShape, CodeType::Zvvnmod, input)
 The package also installs a `meco` binary without changing how Rust projects depend on the library:
 
 ```sh
-cargo install meco-core --version 0.4.2 --locked
+cargo install meco-core --version 0.4.3 --locked
 meco translate --from z52 --to menk_shape 'text'
 ```
 

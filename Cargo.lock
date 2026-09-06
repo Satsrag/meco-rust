@@ -275,21 +275,21 @@ checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
 
 [[package]]
 name = "meco-cabi"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "meco-core",
 ]
 
 [[package]]
 name = "meco-core"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "zvvnmod-utn57",
 ]
 
 [[package]]
 name = "meco-uniffi"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "meco-core",
  "thiserror",
@@ -298,7 +298,7 @@ dependencies = [
 
 [[package]]
 name = "meco-wasm"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "meco-core",
  "wasm-bindgen",
