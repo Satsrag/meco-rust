@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.zvvnmod"
-version = "0.4.3"
+version = "0.4.4"
 
 android {
     namespace = "com.zvvnmod.meco"
