@@ -48,6 +48,10 @@
     .pane .cap select { min-width:0; max-width:100%; font-size:13px; padding:4px 8px;
                         border:1px solid var(--bd); border-radius:6px; background:#fff; }
     .pane.hub .cap { color:var(--hub); font-weight:700; }
+    .cap .capbtns { display:flex; gap:4px; margin-left:auto; }
+    .cap button { font:inherit; font-size:11px; padding:2px 7px; cursor:pointer; white-space:nowrap;
+                  color:#444; border:1px solid var(--bd); border-radius:6px; background:#fff; }
+    .cap button:hover { border-color:var(--acc); color:var(--acc); }
     /* A textarea cannot colour individual characters, so each box is a transparent textarea over a
        backdrop that paints the same text with the same metrics. Both inherit the pane's font. */
     .mongwrap { min-height:0; position:relative; overflow:hidden;
@@ -157,7 +161,7 @@
         </div>
         <div class="arrow" id="arrow2" title="one-way: hub → right / 单向：中间码 → 右栏">→</div>
         <div class="pane" id="paneR">
-            <div class="cap"><select id="encR"></select><span><span class="ro-badge" id="badgeR" hidden>read-only</span> Right / 右</span></div>
+            <div class="cap"><select id="encR"></select><span class="capbtns"><button type="button" id="copyR" title="copy the right box / 复制右栏文本">Copy / 复制</button><button type="button" id="copyRevR" title="copy with the lines in reverse order, last line first / 按行倒序复制，最后一行变第一行">Reverse copy / 反向复制</button></span><span><span class="ro-badge" id="badgeR" hidden>read-only</span> Right / 右</span></div>
             <div class="mongwrap" id="wrapR"><div class="mong bd" id="bdR" aria-hidden="true"></div><textarea class="mong" id="boxR" placeholder="选编码 / 由中间转入"></textarea></div>
             <div class="hex" id="hexR"></div>
         </div>
@@ -572,12 +576,24 @@ function wire(){
     $("alertReport").onclick = openReport;
     $("alertClose").onclick = idle;   // back to the calm state; the same error will not re-raise
     $("reportCancel").onclick = ()=>$("report").close();
-    $("reportCopy").onclick = async ()=>{
-        const t = $("reportWhat").value.trim() + "\n\n" + $("reportBody").textContent;
-        try{ await navigator.clipboard.writeText(t.trim()); $("reportCopy").textContent = "Copied ✓ / 已复制"; }
-        catch(e){ $("reportCopy").textContent = "Copy failed / 复制失败"; }
-        setTimeout(()=>{ $("reportCopy").textContent = "Copy / 复制"; }, 1600);
-    };
+    // Put `text` on the clipboard and flash the outcome on `btn`, restoring its label afterwards.
+    async function copyWith(btn, text){
+        const label = btn.textContent;
+        try{ await navigator.clipboard.writeText(text); btn.textContent = "Copied ✓ / 已复制"; }
+        catch(e){ btn.textContent = "Copy failed / 复制失败"; }
+        setTimeout(()=>{ btn.textContent = label; }, 1600);
+    }
+    // Lines in reverse order, last line first. A trailing newline stays at the end rather than
+    // turning into a leading blank line.
+    function reverseLines(s){
+        const tail = s.endsWith("\n") ? "\n" : "";
+        const body = tail ? s.slice(0, -1) : s;
+        return body.split("\n").reverse().join("\n") + tail;
+    }
+    $("copyR").onclick    = ()=>copyWith($("copyR"),    $("boxR").value);
+    $("copyRevR").onclick = ()=>copyWith($("copyRevR"), reverseLines($("boxR").value));
+    $("reportCopy").onclick = ()=>copyWith($("reportCopy"),
+        ($("reportWhat").value.trim() + "\n\n" + $("reportBody").textContent).trim());
     $("shotGrab").onclick = async ()=>{
         $("shotGrab").disabled = true;
         const was = $("shotGrab").textContent;
