@@ -139,3 +139,19 @@ fn version_matches_the_meco_core_package() {
     );
     assert!(output.stderr.is_empty());
 }
+
+#[test]
+fn reports_an_invented_zwj_on_stderr_and_still_succeeds() {
+    // A lone medial glyph, U+E09C, can only be spelled with a joiner the hub did not carry.
+    let output = meco()
+        .args(["translate", "--from", "zvvnmod", "--to", "utn57", "\u{E09C}"])
+        .output()
+        .expect("meco command should run");
+
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(output.stdout, "\u{200D}\u{182D}\u{180C}\u{1825}\u{180C}".as_bytes());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.starts_with("meco: warning: "), "{stderr}");
+    assert!(stderr.contains("U+E09C"), "{stderr}");
+    assert!(stderr.ends_with('\n'), "{stderr:?}");
+}
