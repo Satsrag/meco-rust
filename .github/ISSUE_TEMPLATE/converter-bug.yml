@@ -88,6 +88,13 @@ body:
       render: text
 
   - type: textarea
+    id: meco-warning
+    attributes:
+      label: Warning from meco / meco 警告
+      description: The converter fills this in when the conversion succeeded but had to invent a ZWJ; leave empty otherwise. / 转换成功但插入了 ZWJ 时转换器会自动填上；没有就留空。
+      render: text
+
+  - type: textarea
     id: screenshot
     attributes:
       label: Screenshot / 截图

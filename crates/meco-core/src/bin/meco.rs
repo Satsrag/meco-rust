@@ -1,4 +1,4 @@
-use meco_core::{translate, version, CodeType};
+use meco_core::{translate_with_warnings, version, CodeType, Warning};
 use std::io::{self, Read, Write};
 use std::process::ExitCode;
 
@@ -16,16 +16,31 @@ oyun is not supported.\n"
     )
 }
 
-fn run(arguments: impl IntoIterator<Item = String>) -> Result<String, String> {
+/// What a successful run writes: the text for stdout, and the warnings for stderr.
+struct Output {
+    text: String,
+    warnings: Vec<Warning>,
+}
+
+impl Output {
+    fn text(text: String) -> Self {
+        Self {
+            text,
+            warnings: Vec::new(),
+        }
+    }
+}
+
+fn run(arguments: impl IntoIterator<Item = String>) -> Result<Output, String> {
     let mut arguments = arguments.into_iter();
     let program = arguments.next().unwrap_or_else(|| "meco".to_owned());
 
     let command = arguments.next();
     if matches!(command.as_deref(), Some("--help" | "-h")) && arguments.next().is_none() {
-        return Ok(help(&program));
+        return Ok(Output::text(help(&program)));
     }
     if matches!(command.as_deref(), Some("--version" | "-V")) && arguments.next().is_none() {
-        return Ok(format!("meco {}\n", version()));
+        return Ok(Output::text(format!("meco {}\n", version())));
     }
     if command.as_deref() != Some("translate") {
         return Err(usage(&program));
@@ -56,18 +71,29 @@ fn run(arguments: impl IntoIterator<Item = String>) -> Result<String, String> {
         .parse::<CodeType>()
         .map_err(|error| error.to_string())?;
     let to = to.parse::<CodeType>().map_err(|error| error.to_string())?;
-    translate(from, to, &input).map_err(|error| error.to_string())
+    let translation =
+        translate_with_warnings(from, to, &input).map_err(|error| error.to_string())?;
+    Ok(Output {
+        text: translation.text,
+        warnings: translation.warnings,
+    })
 }
 
 fn main() -> ExitCode {
     match run(std::env::args()) {
-        Ok(output) => match io::stdout().write_all(output.as_bytes()) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(error) => {
-                eprintln!("meco: could not write stdout: {error}");
-                ExitCode::FAILURE
+        Ok(output) => {
+            // Warnings go to stderr, one per line, so stdout stays the converted bytes alone.
+            for warning in &output.warnings {
+                eprintln!("meco: warning: {warning}");
             }
-        },
+            match io::stdout().write_all(output.text.as_bytes()) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(error) => {
+                    eprintln!("meco: could not write stdout: {error}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
         Err(error) => {
             eprintln!("meco: {error}");
             ExitCode::FAILURE

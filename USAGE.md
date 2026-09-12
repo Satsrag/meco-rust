@@ -9,6 +9,11 @@ All conversions are the same call everywhere:
 translate(from, to, input)   // names: zvvnmod · delehi · menk_shape · menk_letter · z52
 ```
 
+The Rust crate, the `meco` command and the wasm package also offer `translate_with_warnings`: the
+same text, plus one warning per hub run the UTN #57 encoder could spell only with an invented ZWJ
+(the command prints them to stderr as `meco: warning: …`). The C ABI and the UniFFI bindings return
+the text alone.
+
 The **C library is the universal artifact**: `meco-c-<platform>.zip` contains
 `libmeco.{so,dylib,dll}` (dynamic), `libmeco.a`/`meco.lib` (static) and `meco.h`. **C, Go, Python,
 Dart and Java all load this one library** (snippets below). Swift / Objective-C / Android / Web get

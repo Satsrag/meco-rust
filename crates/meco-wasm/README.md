@@ -7,6 +7,7 @@ edge runtimes (Cloudflare Workers, etc.). API:
 import init, { translate, version } from "meco-wasm";  // bundler/web target
 // or: const { translate, version } = require("./pkg/meco_wasm.js");  // nodejs target
 translate("z52", "menk_shape", input); // -> String; throws on unknown encoding / unsupported path
+translate_with_warnings("zvvnmod", "utn57", input); // -> { text, warnings: string[] }; same throws
 ```
 
 `from`/`to` are canonical encoding names: `zvvnmod`, `delehi`, `menk_shape`, `menk_letter`, `z52`.
