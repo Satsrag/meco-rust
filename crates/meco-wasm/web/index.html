@@ -65,6 +65,12 @@
                     color:transparent; caret-color:#222; }
     .bd { position:absolute; inset:0; z-index:0; color:#222; overflow:hidden; pointer-events:none; }
     .bd .bad { color:#c0392b; }
+    /* the mirror of `.cu.sel`: the characters a code-point selection covers, lit in the box above */
+    .bd .hl { background:rgb(45 125 111 / .3); border-radius:3px; box-shadow:0 0 0 1px rgb(45 125 111 / .3); }
+    .bd .hl.bad { background:rgb(192 57 43 / .22); box-shadow:0 0 0 1px rgb(192 57 43 / .3); }
+    /* an echo is the same mark in a pane you did not select in: word-level, so toned down */
+    .bd .hl.echo { background:rgb(45 125 111 / .13); box-shadow:0 0 0 1px rgb(45 125 111 / .2); }
+    .bd .hl.echo.bad { background:rgb(192 57 43 / .1); box-shadow:0 0 0 1px rgb(192 57 43 / .2); }
     textarea.mong::placeholder { color:#b6b1a5; }
     .ro-badge { font-size:11px; color:var(--acc); border:1px solid var(--acc); border-radius:5px; padding:0 4px; }
     .arrow { grid-row:1 / -1; align-self:center; color:var(--mut); font-size:22px; }
@@ -73,12 +79,17 @@
            color:#555; background:#f3f1ea; border:1px solid var(--bd); border-radius:8px;
            padding:6px 8px; white-space:pre-wrap; word-break:break-all; }
     .tag { color:var(--acc); font-weight:700; }
-    .cu { padding:1px 2px; border-radius:3px; }
+    .cu { padding:1px 2px; border-radius:3px; cursor:pointer; }
+    .cu:hover { background:#e6e2d6; }
     .cu.sel { background:var(--acc); color:#fff; }
     .cu.sel .tag { color:#b7e4d6; }
     .cu.bad { color:#c0392b; }
     .cu.sel.bad { background:#c0392b; color:#fff; }
     .cu.sel.bad .tag { color:#f6d0cb; }
+    .cu.sel.echo { background:#cfe7df; color:#12463a; }
+    .cu.sel.echo .tag { color:var(--acc); }
+    .cu.sel.echo.bad { background:#f3d3cd; color:#c0392b; }
+    .cu.sel.echo.bad .tag { color:#c0392b; }
     .err { color:#c0392b; }
     /* Always-on bar in the page column, never floating, so it cannot cover the code-point rows.
        Calm but visible while things work; solid red the moment a conversion actually fails. */
@@ -248,14 +259,20 @@ function foreign(cp, enc){ const c = cls(cp); return c !== null && c !== EXPECT[
 
 const esc = t => t.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"})[c]);
 
-// The backdrop under a textarea: the same text, with out-of-encoding characters in red.
-function paint(text, enc){
-    let out = "", run = "", bad = null;
-    const flush = ()=>{ if(run){ out += bad ? `<span class="bad">${esc(run)}</span>` : esc(run); run = ""; } };
+// The backdrop under a textarea: the same text, with out-of-encoding characters in red, and — when
+// `hl` is a [from, to) UTF-16 range — the characters inside it lit up, toned down when `echo`.
+function paint(text, enc, hl, echo){
+    let out = "", run = "", bad = null, lit = null, i = 0;
+    const flush = ()=>{
+        if(!run) return;
+        const c = [bad && "bad", lit && "hl", lit && echo && "echo"].filter(Boolean).join(" ");
+        out += c ? `<span class="${c}">${esc(run)}</span>` : esc(run);
+        run = "";
+    };
     for(const ch of text){
-        const f = foreign(ch.codePointAt(0), enc);
-        if(f !== bad){ flush(); bad = f; }
-        run += ch;
+        const f = foreign(ch.codePointAt(0), enc), l = !!hl && i >= hl[0] && i < hl[1];
+        if(f !== bad || l !== lit){ flush(); bad = f; lit = l; }
+        run += ch; i += ch.length;
     }
     flush();
     return out + (text.endsWith("\n") ? " " : ""); // a trailing newline needs something to hold it
@@ -301,6 +318,7 @@ function hex(s, enc){
 // Repaint one pane's backdrop and code-point row from its current text and encoding.
 function paintPane(which){
     const enc = encOf(which), text = $("box"+which).value;
+    HL[which] = null;
     $("bd"+which).innerHTML = paint(text, enc);
     $("hex"+which).innerHTML = hex(text, enc);
 }
@@ -315,23 +333,134 @@ function reveal(row, el){
     else if(r.right > c.right)   row.scrollLeft += r.right - c.right + pad;
 }
 
-// Light up the code-point cells covered by the current selection in that box, and bring the first
-// of them into view — the row is capped in height, so a long text hides most of it.
-function markSel(which){
-    const box = $("box"+which), a = box.selectionStart, b = box.selectionEnd, on = b > a;
+// Light up the code-point cells inside `hl` (a [from, to) UTF-16 range, or null for none) and bring
+// the first of them into view — the row is capped in height, so a long text hides most of it.
+function markCells(which, hl, echo){
     const row = $("hex"+which);
     let first = null;
     row.querySelectorAll(".cu").forEach(el=>{
-        const hit = on && +el.dataset.a < b && +el.dataset.b > a;
+        const hit = !!hl && +el.dataset.a < hl[1] && +el.dataset.b > hl[0];
         el.classList.toggle("sel", hit);
+        el.classList.toggle("echo", hit && !!echo);
         if(hit && !first) first = el;
     });
     if(first) reveal(row, first);
 }
+// Mark the cells covered by the box's own selection; returns that range, or null for a bare caret.
+function markSel(which){
+    const box = $("box"+which), a = box.selectionStart, b = box.selectionEnd;
+    const hl = b > a ? [a, b] : null;
+    markCells(which, hl);
+    return hl;
+}
+
+// --- the other direction: code-point row → box ---------------------------
+// The [from, to) UTF-16 range currently lit in each box's backdrop, so a repeated selectionchange
+// does not repaint for nothing.
+const HL = { L:null, M:null, R:null }; // each: [from, to, echo] or null
+
+// Light up `hl` (a [from, to) range, or null for none) in the box's backdrop and scroll the box so
+// the start of it is in sight. The backdrop mirrors the textarea's scroll, so measuring the lit
+// span against the textarea and moving the textarea is enough; the mirror is nudged by hand too,
+// because the scroll event a programmatic scroll fires arrives a frame later.
+function markBox(which, hl, echo){
+    echo = !!echo;
+    const was = HL[which];
+    const same = (was === null && hl === null)
+        || (was && hl && was[0] === hl[0] && was[1] === hl[1] && was[2] === echo);
+    if(same) return;
+    HL[which] = hl ? [hl[0], hl[1], echo] : null;
+    const box = $("box"+which), bd = $("bd"+which);
+    bd.innerHTML = paint(box.value, encOf(which), hl, echo);
+    const first = bd.querySelector(".hl");
+    if(first){
+        reveal(box, first);
+        bd.scrollTop = box.scrollTop; bd.scrollLeft = box.scrollLeft;
+    }
+}
+
+// Which code-point row the document selection sits in, and the cells it touches: a drag covers
+// every cell it crosses, a bare click the one cell under the caret. Null when the selection is
+// somewhere else entirely.
+function hexSel(){
+    const sel = document.getSelection();
+    if(!sel || sel.rangeCount === 0 || !sel.anchorNode) return null;
+    const node = sel.anchorNode, el = node.nodeType === 1 ? node : node.parentElement;
+    const row = el && el.closest(".hex");
+    if(!row) return null;
+    let cells;
+    if(sel.isCollapsed){
+        const one = el.closest(".cu");
+        cells = one ? [one] : [];
+    }else{
+        const range = sel.getRangeAt(0);
+        cells = [...row.querySelectorAll(".cu")].filter(c=>range.intersectsNode(c));
+    }
+    return { which: row.id.slice(3), cells };
+}
+
+// Mark the given cells of a row as selected, and light up the characters they stand for in the
+// box above it. Returns the range they span, or null when there are none.
+function markHex(which, cells){
+    const hl = cells.length
+        ? [Math.min(...cells.map(c=>+c.dataset.a)), Math.max(...cells.map(c=>+c.dataset.b))] : null;
+    markCells(which, hl);
+    markBox(which, hl);
+    return hl;
+}
+
+// --- echoing a selection across panes ------------------------------------
+// The three texts are the same words in three encodings, but a word rarely has the same number of
+// code points in each, so characters cannot be matched one to one. Words can: split every pane on
+// the same separators and, when all three come out with the same count, the n-th word of one is
+// the n-th word of the others. When the counts disagree (an encoding turned a space into NNBSP,
+// or a side failed to convert) fall back to lines. A selection maps to the words it touches.
+const SPLITS = [/[ \u202f\t\r\n]+/g, /[\r\n]+/g];
+function tokens(text, re){
+    const out = []; let i = 0, m; re.lastIndex = 0;
+    while((m = re.exec(text))){ if(m.index > i) out.push([i, m.index]); i = m.index + m[0].length; }
+    if(i < text.length) out.push([i, text.length]);
+    return out;
+}
+let alignKey = null, alignSegs = null; // memo: the alignment only changes when a text does
+function alignment(){
+    const t = { L:$("boxL").value, M:$("boxM").value, R:$("boxR").value };
+    const key = t.L + "\0" + t.M + "\0" + t.R;
+    if(key === alignKey) return alignSegs;
+    alignKey = key; alignSegs = null;
+    for(const re of SPLITS){
+        const segs = { L:tokens(t.L, re), M:tokens(t.M, re), R:tokens(t.R, re) };
+        if(segs.L.length && segs.L.length === segs.M.length && segs.M.length === segs.R.length){
+            alignSegs = segs; break;
+        }
+    }
+    return alignSegs;
+}
+// The [from, to) range in pane `to` that stands for `hl` in pane `from`: the span of the words it
+// touches. Null when the panes cannot be aligned or the range touches no word.
+function echoRange(from, hl, to){
+    const al = alignment();
+    if(!al || !hl) return null;
+    let i = -1, j = -1;
+    al[from].forEach((w, k)=>{ if(w[0] < hl[1] && w[1] > hl[0]){ if(i < 0) i = k; j = k; } });
+    return i < 0 ? null : [al[to][i][0], al[to][j][1]];
+}
+
+// One selection drives everything: a box with focus lights its own code-point row (box → row); a
+// selection inside a code-point row lights the box above it (row → box); either way the other two
+// panes echo the words it covers, box and row alike. With no selection anywhere, all six are dark.
 function syncSel(){
+    const h = hexSel();
+    let origin = null, range = null;
     ["L","M","R"].forEach(x=>{
-        if(document.activeElement === $("box"+x)) markSel(x);
-        else $("hex"+x).querySelectorAll(".cu.sel").forEach(el=>el.classList.remove("sel"));
+        if(document.activeElement === $("box"+x)){ origin = x; range = markSel(x); markBox(x, null); }
+        else if(h && h.which === x){ origin = x; range = markHex(x, h.cells); }
+    });
+    ["L","M","R"].forEach(x=>{
+        if(x === origin) return;
+        const r = origin ? echoRange(origin, range, x) : null;
+        markCells(x, r, true);
+        markBox(x, r, true);
     });
 }
 function fillSel(sel, def, types){ types.forEach(t=>{
@@ -644,6 +773,7 @@ function wire(){
     document.addEventListener("selectionchange", syncSel);
     ["L","M","R"].forEach(x=>["select","mouseup","keyup","focus","blur"].forEach(ev=>
         $("box"+x).addEventListener(ev, syncSel)));
+    ["L","M","R"].forEach(x=>$("hex"+x).addEventListener("mouseup", syncSel));
     $("encL").onchange = ()=>{ applySide("L"); reconvert("L"); };
     $("encR").onchange = ()=>{ applySide("R"); reconvert("R"); };
 }
