@@ -816,9 +816,9 @@ checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
 
 [[package]]
 name = "zvvnmod-utn57"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "026e6e53eef47f09fde27203ae071aa9593203a98cde422acdd113cece62a918"
+checksum = "256cb135b4f04b766f585cfed9828aef9cd6172b272a390a050cd6676c5925b2"
 dependencies = [
  "mongol-norm",
 ]
