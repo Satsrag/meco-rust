@@ -31,7 +31,14 @@ fn translates_positional_text_without_adding_a_newline() {
 #[test]
 fn converts_to_utn57_without_any_external_backend() {
     let output = meco()
-        .args(["translate", "--from", "zvvnmod", "--to", "utn57", "\u{E0E5}"])
+        .args([
+            "translate",
+            "--from",
+            "zvvnmod",
+            "--to",
+            "utn57",
+            "\u{E0E5}",
+        ])
         .env_clear()
         .output()
         .expect("meco command should run");
@@ -54,8 +61,15 @@ fn accepts_utn57_as_a_source() {
         .output()
         .expect("meco command should run");
 
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
-    assert_eq!(output.stdout, "\u{182E}\u{1823}\u{1829}\u{182D}\u{1823}\u{182F}".as_bytes());
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        output.stdout,
+        "\u{182E}\u{1823}\u{1829}\u{182D}\u{1823}\u{182F}".as_bytes()
+    );
     assert!(output.stderr.is_empty());
 }
 
@@ -144,14 +158,52 @@ fn version_matches_the_meco_core_package() {
 fn reports_an_invented_zwj_on_stderr_and_still_succeeds() {
     // A lone medial glyph, U+E09C, can only be spelled with a joiner the hub did not carry.
     let output = meco()
-        .args(["translate", "--from", "zvvnmod", "--to", "utn57", "\u{E09C}"])
+        .args([
+            "translate",
+            "--from",
+            "zvvnmod",
+            "--to",
+            "utn57",
+            "\u{E09C}",
+        ])
         .output()
         .expect("meco command should run");
 
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
-    assert_eq!(output.stdout, "\u{200D}\u{182D}\u{180C}\u{1825}\u{180C}".as_bytes());
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        output.stdout,
+        "\u{200D}\u{182D}\u{180C}\u{1825}\u{180C}".as_bytes()
+    );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.starts_with("meco: warning: "), "{stderr}");
     assert!(stderr.contains("U+E09C"), "{stderr}");
     assert!(stderr.ends_with('\n'), "{stderr:?}");
+}
+
+#[test]
+fn converts_the_written_unit_spelling_in_both_directions() {
+    let out = meco()
+        .args(["translate", "--from", "delehi", "--to", "utn57_shape", "\u{1830}\u{1820}\u{1822}\u{1828}"])
+        .output()
+        .expect("meco command should run");
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert_eq!(out.stdout, b"SAIIA");
+    assert!(out.stderr.is_empty());
+
+    let back = meco()
+        .args(["translate", "--from", "utn57_shape", "--to", "utn57", "SAIIA"])
+        .output()
+        .expect("meco command should run");
+    assert!(back.status.success(), "stderr: {}", String::from_utf8_lossy(&back.stderr));
+    assert_eq!(
+        back.stdout,
+        "\u{1830}\u{1820}\u{1822}\u{180D}\u{1822}\u{180D}\u{1820}\u{180C}".as_bytes()
+    );
+
+    let help = meco().arg("--help").output().expect("meco command should run");
+    assert!(String::from_utf8_lossy(&help.stdout).contains("utn57_shape"));
 }

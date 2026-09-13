@@ -11,7 +11,7 @@ fn help(program: &str) -> String {
         "Mongolian encoding converter\n\n\
 Usage:\n  {program} translate --from <encoding> --to <encoding> [text]\n\n\
 When [text] is omitted, meco reads UTF-8 text from stdin. Converted UTF-8 text is written to stdout without adding a newline.\n\n\
-Encodings:\n  zvvnmod\n  delehi\n  menk_shape\n  menk_letter\n  oyun\n  utn57\n  z52\n\n\
+Encodings:\n  zvvnmod\n  delehi\n  menk_shape\n  menk_letter\n  oyun\n  utn57\n  utn57_shape\n  z52\n\n\
 oyun is not supported.\n"
     )
 }

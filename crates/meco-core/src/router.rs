@@ -15,6 +15,7 @@ use crate::shape::punctuation_gap;
 use crate::shape::translator::ShapeTranslator;
 use crate::strings;
 use crate::unicode::zvvnmod::is_zvvnmod_code;
+use crate::utn57_shape;
 use std::fmt;
 
 /// Something a conversion did beyond what its input said. It never changes the result: the text
@@ -158,6 +159,11 @@ fn translate_from(ct: CodeType, s: &str) -> Result<String, MecoError> {
     if ct == CodeType::Oyun {
         return Err(MecoError::Unsupported(ct));
     }
+    if ct == CodeType::Utn57Shape {
+        // The written-unit spelling of a UTN #57 text: read it as that text.
+        let utn57 = utn57_shape::decode(s)?;
+        return translate_from(CodeType::Utn57, &utn57);
+    }
     if ct == CodeType::Utn57 {
         // Already hub-spelled: the UTN #57 crate reads and writes E0E5 itself.
         return zvvnmod_utn57::convert_utn57_to_zvvnmod(s)
@@ -185,6 +191,14 @@ fn translate_from(ct: CodeType, s: &str) -> Result<String, MecoError> {
 fn translate_to(ct: CodeType, s: &str) -> Result<Translation, MecoError> {
     if ct == CodeType::Oyun {
         return Err(MecoError::Unsupported(ct));
+    }
+    if ct == CodeType::Utn57Shape {
+        // The UTN #57 conversion, then its shape; the warnings are that conversion's.
+        let utn57 = translate_to(CodeType::Utn57, s)?;
+        return Ok(Translation {
+            text: utn57_shape::encode(&utn57.text)?,
+            warnings: utn57.warnings,
+        });
     }
     // A hub written by hand, or by an older release, may still spell the nirugu the Unicode way.
     // Both readings are accepted; only the hub spelling is ever produced.
