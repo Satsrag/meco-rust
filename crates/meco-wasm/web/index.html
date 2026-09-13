@@ -220,7 +220,7 @@
 <script type="module">
 import init, { translate, translate_with_warnings, version } from "./pkg/meco_wasm.js";
 
-const SIDE_TYPES = ["z52", "menk_shape", "menk_letter", "delehi", "utn57"]; // oyun still deferred
+const SIDE_TYPES = ["z52", "menk_shape", "menk_letter", "delehi", "utn57", "utn57_shape"]; // oyun still deferred
 // Every one of these reads and writes; the left/right split is a layout choice about where you
 // type, not a limit on what meco can decode.
 const SOURCE_TYPES = SIDE_TYPES;
@@ -237,10 +237,14 @@ const STD_NOTE = {
                + "字面实现，FVS 相对语义",
     utn57:       "GB/T 25914-2023 / UTN #57 rev.4 · absolute semantics, adds FVS4 U+180F / "
                + "绝对语义，新增 FVS4 U+180F",
+    utn57_shape: "The UTN #57 text spelled as its written units (mongol-norm shape): ᠰᠠᠢᠨ is SAIIA, "
+               + "Mvs/Nirugu/Zwj are tokens; input also takes S+A+I+I+A / UTN #57 文本的书写单元拼写"
+               + "（mongol-norm shape）：ᠰᠠᠢᠨ 写作 SAIIA，Mvs/Nirugu/Zwj 是 token；输入也接受 S+A+I+I+A",
 };
 const FONTS = {
     zvvnmod:"'zvvn mod'", delehi:"'delehi'", menk_letter:"'menk letter'",
     menk_shape:"'menk shape'", z52:"'z52'", utn57:"'utn57'",
+    utn57_shape:"ui-monospace, Menlo, Consolas, monospace",   // ASCII: no Mongolian font needed
 };
 const FALLBACK = ",'zvvn mod',sans-serif";
 const SPECIAL = {0x0020:"SP",0x202f:"NNBSP",0x180e:"MVS",0x180b:"FVS1",0x180c:"FVS2",0x180d:"FVS3",

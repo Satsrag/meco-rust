@@ -30,6 +30,7 @@ mod shape;
 mod strings;
 mod tables;
 mod unicode;
+mod utn57_shape;
 mod word;
 
 pub use code_type::{CodeSeries, CodeType};

@@ -32,6 +32,7 @@ UTN #57 Unicode 输出已经内置到所有平台。转换逻辑是纯 Rust、�
 | `menk_letter` | Menk 字母约定 | 是 | 是 |
 | `z52` | Z52/zcode 位置字形编码 | 是 | 是 |
 | `utn57` | 按 reviewed UTN #57 mapping 的 Unicode | 是 | 是 |
+| `utn57_shape` | UTN #57 文本的书写单元拼写，ᠰᠠᠢᠨ 写作 `SAIIA` | 是 | 是 |
 | `oyun` | 原始 API 保留的类型 | 否 | 否 |
 
 MenkLetter 和 Delehi 使用很多相同的 Unicode 码位，但上下文解释规则不同。`meco` 不会自动猜测源编码。应根据产生文本的应用、输入法、字体系统或数据库字段选择 `--from`。
@@ -144,6 +145,20 @@ meco translate --from utn57 --to z52 '...'
 #### MenkLetter 和 Delehi 的结果不同
 
 它们是不同的源编码约定，只是都使用 Unicode 蒙古文字母。先确认文本来自哪个输入法、应用或数据库字段，不要根据视觉效果随意切换 `--from`。
+
+### 书写单元拼写：`utn57_shape`
+
+`utn57_shape` 就是用 mongol-norm 的 shape 函数看 `utn57` 文本：每个蒙古文词写成其书写单元名的
+PascalCase 拼接，结构单元也在其中 —— ᠰᠠᠢᠨ 是 `SAIIA`，ᠮᠣᠩᠭᠣᠯ᠎ᠤᠨ 是 `MOAGNNOLMvsOA`。非词部分原样透传，
+和其他编码一样。它既能写也能读：`SAIIA`（或 `mongol-norm shape` 命令打印的 `S+A+I+I+A`）会被规范化成
+canonical 的 UTN #57 拼法，然后按 `utn57` 的路径继续，所以到任何目标编码的结果都和那个拼法完全一致。
+以大写字母开头却不是拼写的词 —— 未知单元、有歧义的紧凑串、规范化表未覆盖的 shape —— 会报错并说明原因，
+不会静默透传。
+
+```bash
+meco translate --from delehi --to utn57_shape 'ᠰᠠᠢᠨ'     # SAIIA
+meco translate --from utn57_shape --to utn57 'SAIIA'      # ᠰᠠᠢ᠍ᠢ᠍ᠠ᠌
+```
 
 ## 作为 Rust library 使用
 

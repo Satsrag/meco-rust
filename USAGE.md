@@ -6,7 +6,7 @@ Every release attaches ready-to-download artifacts to the **GitHub Releases** pa
 All conversions are the same call everywhere:
 
 ```
-translate(from, to, input)   // names: zvvnmod · delehi · menk_shape · menk_letter · z52
+translate(from, to, input)   // names: zvvnmod · delehi · menk_shape · menk_letter · z52 · utn57 · utn57_shape
 ```
 
 The Rust crate, the `meco` command and the wasm package also offer `translate_with_warnings`: the

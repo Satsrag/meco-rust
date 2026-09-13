@@ -34,6 +34,7 @@ The page is built from `crates/meco-wasm/web` with its `build.sh`.
 | `menk_letter` | Menk letter convention | Yes | Yes |
 | `z52` | Z52/zcode positional encoding | Yes | Yes |
 | `utn57` | Unicode following the reviewed UTN #57 mapping | Yes | Yes |
+| `utn57_shape` | The UTN #57 text spelled as its written units, ᠰᠠᠢᠨ as `SAIIA` | Yes | Yes |
 | `oyun` | Reserved by the original API | No | No |
 
 MenkLetter and Delehi use many of the same Unicode code points, but they apply different contextual rules. `meco` does not guess the source encoding. Choose `--from` from the application, input method, font system, or database column that produced the text.
@@ -149,6 +150,22 @@ That is expected. UTN #57 serialization uses standard Unicode Mongolian letters 
 #### MenkLetter and Delehi produce different results
 
 They are different source conventions even though both use Unicode Mongolian letters. Check where the source text came from. Do not switch the `--from` value based only on how the text looks.
+
+### The written-unit spelling: `utn57_shape`
+
+`utn57_shape` is the `utn57` text seen through mongol-norm's shape function: every Mongolian word
+is spelled as the PascalCase names of its written units, structural units included — ᠰᠠᠢᠨ is
+`SAIIA`, ᠮᠣᠩᠭᠣᠯ᠎ᠤᠨ is `MOAGNNOLMvsOA`. Everything that is not a word passes through, as in every
+other encoding. It reads as well as it writes: `SAIIA` (or the `+`-joined `S+A+I+I+A` that the
+`mongol-norm shape` command prints) is normalized to the canonical UTN #57 spelling and continues
+as `utn57` would, so it reaches every target exactly as that spelling does. A word that begins
+with an uppercase letter but is not a spelling — an unknown unit, an ambiguous compact string, a
+shape the normalize table does not cover — is an error naming the reason, not passthrough.
+
+```bash
+meco translate --from delehi --to utn57_shape 'ᠰᠠᠢᠨ'     # SAIIA
+meco translate --from utn57_shape --to utn57 'SAIIA'      # ᠰᠠᠢ᠍ᠢ᠍ᠠ᠌
+```
 
 ## Use the Rust library
 

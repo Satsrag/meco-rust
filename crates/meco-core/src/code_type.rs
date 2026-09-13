@@ -20,6 +20,9 @@ pub enum CodeSeries {
 ///
 /// `Oyun` and `Utn57` are parseable. `Oyun` remains unsupported in both directions; UTN #57
 /// converts both ways through the in-process `zvvnmod-utn57` backend.
+///
+/// `Utn57Shape` has no Java counterpart: it is the written-unit spelling of a UTN #57 text
+/// (ᠰᠠᠢᠨ as `SAIIA`), read and written through `Utn57`.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum CodeType {
     Zvvnmod,
@@ -29,6 +32,7 @@ pub enum CodeType {
     Oyun,
     Utn57,
     Z52,
+    Utn57Shape,
 }
 
 impl CodeType {
@@ -42,6 +46,7 @@ impl CodeType {
             CodeType::Oyun => CodeSeries::Letter,
             CodeType::Utn57 => CodeSeries::Letter,
             CodeType::Z52 => CodeSeries::Shape,
+            CodeType::Utn57Shape => CodeSeries::Letter,
         }
     }
 
@@ -55,6 +60,7 @@ impl CodeType {
             CodeType::Oyun => "oyun",
             CodeType::Utn57 => "utn57",
             CodeType::Z52 => "z52",
+            CodeType::Utn57Shape => "utn57_shape",
         }
     }
 
@@ -77,6 +83,7 @@ impl FromStr for CodeType {
             "oyun" => Ok(CodeType::Oyun),
             "utn57" => Ok(CodeType::Utn57),
             "z52" => Ok(CodeType::Z52),
+            "utn57_shape" | "utn57shape" => Ok(CodeType::Utn57Shape),
             _ => Err(MecoError::UnsupportedEnumType(s.to_string())),
         }
     }
@@ -133,5 +140,13 @@ mod tests {
             Err(MecoError::UnsupportedEnumType(_))
         ));
         assert!(CodeType::get("").is_err());
+    }
+
+    #[test]
+    fn utn57_shape_parses_and_prints_like_menk_shape() {
+        assert_eq!(CodeType::get("utn57_shape").unwrap(), CodeType::Utn57Shape);
+        assert_eq!(CodeType::get("UTN57SHAPE").unwrap(), CodeType::Utn57Shape);
+        assert_eq!(CodeType::Utn57Shape.canonical_str(), "utn57_shape");
+        assert_eq!(CodeType::Utn57Shape.code_series(), CodeSeries::Letter);
     }
 }
