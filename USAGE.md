@@ -33,7 +33,7 @@ The `meco-core` crate is both a Rust library and an installable command. Install
 release from crates.io:
 
 ```sh
-cargo install meco-core --version 0.5.0 --locked
+cargo install meco-core --version 0.5.1 --locked
 ```
 
 Convert a command-line argument:
