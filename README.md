@@ -103,7 +103,7 @@ On zsh, a `%` displayed immediately after the result is the shell's end-of-line 
 
 ## Convert to UTN #57
 
-UTN #57 output uses the reviewed ZVVNMOD-to-positioned-written-unit mapping from `zvvnmod-utn57 0.3.0` and the pinned pure-Rust `mongol-norm 0.2.0` normalizer. Both are compiled into `meco`; nothing else has to be installed.
+UTN #57 output uses the reviewed ZVVNMOD-to-positioned-written-unit mapping from `zvvnmod-utn57 0.3.2` and the pinned pure-Rust `mongol-norm 0.2.1` normalizer. Both are compiled into `meco`; nothing else has to be installed.
 
 A conversion can succeed and still have gone beyond what the input said: when a hub run begins or ends with a joined-form glyph the hub has no unjoined form of, the encoder can only spell it with an invented ZWJ. `translate_with_warnings` returns the same text together with one warning per such run, naming the run's codes; the `meco` command prints them to stderr as `meco: warning: …` and still exits 0. That is how the missing word-initial `G i O f` ligature (now `E096`, Satsrag/meco-rust#32) showed up, and how the next gap will.
 
@@ -248,8 +248,8 @@ UTN #57 output adds two reviewed stages, both linked into the same binary:
 source encoding
 → meco-core
 → ZVVNMOD positioned shapes
-→ zvvnmod-utn57 0.3.0 positioned written units
-→ mongol-norm 0.2.0 (pure Rust, in process)
+→ zvvnmod-utn57 0.3.2 positioned written units
+→ mongol-norm 0.2.1 (pure Rust, in process)
 → Unicode letters and format controls
 ```
 
