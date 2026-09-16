@@ -157,6 +157,94 @@ fn comitative_and_plural_repair_respects_context_and_boundaries() {
 }
 
 #[test]
+fn remaining_audited_suffix_families_match_manual_nnbsp() {
+    let cases = [
+        ("ᠮᠠᠯ", "ᠤᠳ"),
+        ("ᠭᠡᠷ", "ᠦᠳ"),
+        ("ᠪᠠᠭᠰᠢ", "ᠳᠠᠭᠠᠨ"),
+        ("ᠡᠭᠡᠴᠢ", "ᠳᠡᠭᠡᠨ"),
+        ("ᠤᠯᠤᠰ", "ᠲᠠᠭᠠᠨ"),
+        ("ᠭᠡᠷ", "ᠲᠡᠭᠡᠨ"),
+        ("ᠨᠣᠮ", "ᠶᠤᠭᠠᠨ"),
+        ("ᠭᠡᠷ", "ᠶᠦᠭᠡᠨ"),
+        ("ᠨᠣᠮ", "ᠠᠴᠠᠭᠠᠨ"),
+        ("ᠭᠡᠷ", "ᠡᠴᠡᠭᠡᠨ"),
+        ("ᠨᠣᠮ", "ᠳᠤᠨᠢ"),
+        ("ᠡᠭᠡᠴᠢ", "ᠳᠦᠨᠢ"),
+        ("ᠤᠯᠤᠰ", "ᠲᠤᠨᠢ"),
+        ("ᠭᠡᠷ", "ᠲᠦᠨᠢ"),
+        ("ᠬᠣᠲᠠ", "ᠳᠠᠬᠢ"),
+        ("ᠭᠡᠷ", "ᠳᠡᠬᠢ"),
+        ("ᠨᠡᠷ\u{180E}ᠡ", "ᠶᠦᠭᠡᠨ"), // existing golden-corpus example
+        ("ᠤᠨᠠᠭ\u{180E}ᠠ", "ᠨᠤᠭᠤᠳ"),
+    ];
+    for from in [CodeType::MenkLetter, CodeType::Delehi] {
+        for (stem, suffix) in cases {
+            for separator in [' ', '\u{A0}'] {
+                // Leading non-ASCII text makes warning offsets differ from character counts.
+                let raw = format!("例：{stem}{separator}{suffix}᠃");
+                let fixed = format!("例：{stem}\u{202F}{suffix}᠃");
+                for to in [
+                    CodeType::MenkLetter,
+                    CodeType::Delehi,
+                    CodeType::MenkShape,
+                    CodeType::Zvvnmod,
+                    CodeType::Z52,
+                    CodeType::Utn57,
+                    CodeType::Utn57Shape,
+                ] {
+                    let result = translate_with_options(from, to, &raw, &REPAIR).unwrap();
+                    assert_eq!(result.text, translate(from, to, &fixed).unwrap(), "{raw}");
+                    assert_eq!(
+                        result.warnings,
+                        vec![Warning::RepairedSuffixSeparator {
+                            byte_offset: "例：".len() + stem.len(),
+                            original: separator,
+                        }]
+                    );
+                    assert_eq!(
+                        translate_with_options(from, to, &raw, &TranslationOptions::default())
+                            .unwrap(),
+                        translate_with_warnings(from, to, &raw).unwrap(),
+                    );
+                }
+                let again = translate_with_options(from, from, &fixed, &REPAIR).unwrap();
+                assert_eq!(again.text, fixed);
+                assert!(again.warnings.is_empty());
+            }
+            for raw in [
+                format!("{stem} {suffix}ᠡ"), // exact suffix, not a longer word's prefix
+                format!("{stem} {suffix}\u{180B}"),
+                format!("{stem}\u{200D} {suffix}"),
+                format!("{stem}\n{suffix}"),
+                format!("{stem}  {suffix}"),
+                format!("ᠨᠣᠡᠮ {suffix}"),
+                format!("ᠪᠢᠴᠢᠭ {suffix}"),
+            ] {
+                let result = translate_with_options(from, from, &raw, &REPAIR).unwrap();
+                assert_eq!(result.text, raw);
+                assert!(result.warnings.is_empty(), "{raw}");
+            }
+        }
+        let chain = translate_with_options(from, from, "ᠮᠠᠯ ᠤᠳ ᠠᠴᠠᠭᠠᠨ", &REPAIR).unwrap();
+        assert_eq!(chain.text, "ᠮᠠᠯ\u{202F}ᠤᠳ\u{202F}ᠠᠴᠠᠭᠠᠨ");
+        assert_eq!(chain.warnings.len(), 2);
+        for raw in [
+            "ᠭᠡᠷ ᠠᠴᠠᠭᠠᠨ",
+            "ᠨᠣᠮ ᠡᠴᠡᠭᠡᠨ",                 // mismatched harmony
+            "ᠨᠡ\u{180E}ᠷᠡ ᠶᠦᠭᠡᠨ",         // misplaced MVS
+            "ᠨᠡᠷ\u{180E}\u{180E}ᠡ ᠶᠦᠭᠡᠨ", // repeated MVS
+            "ᠤᠨᠠᠭ\u{180E}ᠠ ᠢᠶᠠᠨ",         // chachlag is still vowel-final
+            "ᠡᠨᠡ ᠳᠤᠭᠠᠷ ᠵᠠᠶᠢᠰᠠᠩ",          // independent dictionary phrase, not an ordinal
+        ] {
+            let result = translate_with_options(from, from, raw, &REPAIR).unwrap();
+            assert_eq!(result.text, raw);
+            assert!(result.warnings.is_empty());
+        }
+    }
+}
+
+#[test]
 fn particle_shaping_support_does_not_automatically_enable_repair() {
     // Deliberately deferred entries from the pinned Hudum particle mapping. This is an
     // exclusion regression, not a claim that these constructed phrases are grammatical.
@@ -167,25 +255,14 @@ fn particle_shaping_support_does_not_automatically_enable_repair() {
             "ᠪᠦᠦ",
             "ᠠ",
             "ᠡ",
-            "ᠠᠴᠠᠭᠠᠨ",
-            "ᠤᠳ",
-            "ᠦᠳ",
             "ᠴᠤ",
             "ᠴᠦ",
-            "ᠲᠦᠨᠢ",
-            "ᠶᠦᠭᠡᠨ",
             "ᠨᠦᠭᠡᠨ",
             "ᠶᠦᠮ",
             "ᠶᠦᠮᠰᠡᠨ",
             "ᠬᠦ",
-            "ᠳᠠᠭᠠᠨ",
-            "ᠳᠡᠭᠡᠨ",
             "ᠳᠠᠭ",
             "ᠳᠡᠭ",
-            "ᠳᠠᠬᠢ",
-            "ᠳᠡᠬᠢ",
-            "ᠳᠤᠨᠢ",
-            "ᠳᠦᠨᠢ",
             "ᠳᠤᠭᠠᠷ",
             "ᠳᠦᠭᠡᠷ",
             "ᠳᠠ",
@@ -197,10 +274,12 @@ fn particle_shaping_support_does_not_automatically_enable_repair() {
             "ᠪᠠᠨ",
             "ᠪᠡᠨ",
         ] {
-            let raw = format!("ᠨᠣᠮ {particle}");
-            let result = translate_with_options(from, from, &raw, &REPAIR).unwrap();
-            assert_eq!(result.text, raw);
-            assert!(result.warnings.is_empty(), "{particle}");
+            for stem in ["ᠨᠣᠮ", "ᠭᠡᠷ"] {
+                let raw = format!("{stem} {particle}");
+                let result = translate_with_options(from, from, &raw, &REPAIR).unwrap();
+                assert_eq!(result.text, raw);
+                assert!(result.warnings.is_empty(), "{particle}");
+            }
         }
     }
 }

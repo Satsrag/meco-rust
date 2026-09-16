@@ -67,14 +67,19 @@ Mongolian word and one of these exact suffix spellings with NNBSP (U+202F):
 `ᠶᠢᠨ`, `ᠤᠨ`, `ᠦᠨ`, `ᠤ`, `ᠦ`, `ᠶᠢ`, `ᠢ`, `ᠳᠤ`, `ᠳᠦ`, `ᠲᠤ`, `ᠲᠦ`,
 `ᠳᠤᠷ`, `ᠳᠦᠷ`, `ᠲᠤᠷ`, `ᠲᠦᠷ`, `ᠠᠴᠠ`, `ᠡᠴᠡ`, `ᠢᠶᠠᠷ`, `ᠢᠶᠡᠷ`.
 
-It additionally recognises `ᠢᠶᠠᠨ` / `ᠢᠶᠡᠨ` after a consonant-final segment with matching
-masculine / feminine vowels; `ᠯᠤᠭ᠎ᠠ` / `ᠯᠦᠭᠡ` (comitative) and `ᠨᠤᠭᠤᠳ` / `ᠨᠦᠭᠦᠳ`
-(plural) require matching vowels without a stem-ending restriction. The internal MVS in
-`ᠯᠤᠭ᠎ᠠ` is preserved. These six rules skip preceding segments with controls, mixed vowel
-harmony, or only neutral vowels. In suffix chains this check uses the immediately preceding
-segment. The original 19 rules do not perform this additional context check.
-See the [particle mapping audit](../../docs/suffix-separator-repair.md) for sources and deferred
-forms. A font's particle mapping table is not an automatic-repair allowlist.
+Another 22 spellings use a matching masculine/feminine vowel check: iyan/iyen, luγ-a/lüge,
+nuγud/nügüd, ud/üd, daγan/degen, taγan/tegen, yuγan/yügen, ačaγan/ečegen, duni/düni,
+tuni/tüni and dahi/dehi. Only iyan/iyen additionally require a consonant-final segment.
+The check skips mixed-harmony and neutral-only segments, and accepts a final consonant +
+MVS + A/E while leaving other control-bearing contexts unchanged. Internal MVS characters
+are preserved. In suffix chains the check uses the immediately preceding segment.
+The original 19 rules do not perform this additional context check.
+
+See the [particle mapping audit](../../docs/suffix-separator-repair.md) for the exact Unicode
+spellings, evidence and decisions for all 49 entries in the pinned font table. Repair supports
+41 spellings in total; this is not a complete Mongolian suffix inventory. Ordinal dugar/düger
+requires numeral context and is excluded, along with discourse particles whose separator
+convention cannot be inferred by this rule. A font's particle table is not a repair allowlist.
 
 This is an explicit spelling heuristic, not grammatical validation: it cannot tell whether a
 suffix-like token was intended as a separate word or a quoted letter. Common ambiguous forms

@@ -32,51 +32,129 @@ Conversely, presence means that a particular spelling gets special shaping, some
 after an **already present** MVS. It does not mean an ordinary space preceding that spelling
 is erroneous. These mappings also cannot be blindly copied between font conventions.
 
-## Decisions
+## Complete review of the pinned Hudum table
 
-| Forms (upstream aliases) | Decision | Reason |
+All **49** MNG entries are accounted for below: **32** map to supported spellings, and **17**
+are intentionally not automatically repaired for the stated reasons. This is coverage of
+one pinned font table, not a claim that all Mongolian suffixes have been enumerated.
+
+The implementation recognises **41 exact spellings**: those 32 plus nine counterparts/forms
+outside the font table (ece, tur, luγ-a, nuγud, ečegen, taγan, tegen, yuγan, tuni).
+Absence from a special-shaping table does not exclude a grammatical suffix.
+Their exact Unicode spellings are `ᠡᠴᠡ`, `ᠲᠤᠷ`, `ᠯᠤᠭ᠎ᠠ`, `ᠨᠤᠭᠤᠳ`, `ᠡᠴᠡᠭᠡᠨ`,
+`ᠲᠠᠭᠠᠨ`, `ᠲᠡᠭᠡᠨ`, `ᠶᠤᠭᠠᠨ` and `ᠲᠤᠨᠢ`.
+
+Additional comparison sources:
+
+- [L2/19-368, Appendix B, Table 10, printed pages 31–34](https://www.unicode.org/L2/L2019/19368-draft-utn-mongolian.pdf)
+  compares particle spellings and conventions. It is a draft comparison, not an adopted
+  universal repair rule. In particular, some entries have conflicting conventions or tentative
+  grammatical glosses. Its discussion also warns of transliteration inconsistencies in L2/18-293.
+- [Mongoltoli: дугар зайсан](https://mongoltoli.mn/dictionary/detail/116122) gives the separate
+  token `ᠳᠤᠭᠠᠷ` in an independent phrase. An ordinal suffix matcher must first establish
+  numeral context rather than rewriting every occurrence after a Mongolian word.
+
+### Families supported by the review
+
+| Family | Exact letter spellings | Evidence and repair policy |
 |---|---|---|
-| i y a n / i y e n | Add two context-gated repair spellings | Explicit MVS particle entries; supporting reflexive morphology; both source converters verified with manual NNBSP input. |
-| l ue g e; n ue g ue d | Add, together with masculine luγ-a and nuγud | Separate-suffix evidence in L2/18-293, corroborated by the existing Delehi corpus; both source converters verified with manual NNBSP input. |
-| u u / ue ue / b ue ue | Do not add | These three mappings do not require an MVS prefix. |
-| a / e | Do not add | A/E and MVS also participate in chachlag; a bare one-letter match does not establish a detached suffix. |
-| ch u / ch ue; y ue m / y ue m s e n; h ue; d a / d e | Defer | Particle shaping does not establish that a missing connector should be inferred in ordinary text. Context and convention evidence are needed. |
-| a ch a g a n; d a g a n / d e g e n; u d / ue d; n ue g e n; y ue g e n | Pending review | Not yet evaluated for repair in this change; this is not evidence that they are unsafe or should remain unsupported. |
-| t ue n i; d a g / d e g; d a h i / d e h i; d u n i / d ue n i; d u g a r / d ue g e r | Defer | Need source-specific spelling, boundary and ambiguity checks. |
-| bar / ber, tai / tei, ban / ben and other forms outside this table | No change | A separate review is needed; the table alone establishes neither completeness nor repair safety. |
+| Original case suffixes | yin, un/ün, u/ü, yi/i, du/dü, tu/tü, dur/dür, tur/tür, ača/eče, iyar/iyer | Original 19 rules retained; no extra harmony gate. |
+| Reflexive | iyan/iyen | L2/18-293 Table 5; consonant-final preceding segment and matching harmony. |
+| Comitative | luγ-a/lüge | L2/18-293 Table 5 and Delehi corpus; matching harmony, preserve internal MVS. |
+| Plural | nuγud/nügüd, ud/üd | Both comparison tables and Delehi corpus; matching harmony, no plural-allomorph selection. |
+| Reflexive dative | daγan/degen, taγan/tegen | Both comparison tables; matching harmony. |
+| Reflexive accusative | yuγan/yügen | Both comparison tables, yügen also in Delehi corpus; matching harmony. |
+| Reflexive ablative | ačaγan/ečegen | Both comparison tables; matching harmony. |
+| Possessive dative | duni/düni, tuni/tüni | L2/19-368 Table 10; matching harmony. |
+| Locative-related nominal particles | dahi/dehi | Hudum and L2/19-368 Table 10; matching harmony. The comparator's precise grammatical gloss is tentative. |
 
-The six additions bring the recognised inventory to **25 spellings**. They require:
+The 22 additions beyond the original 19 use an explicit masculine/feminine vowel check.
+A preceding segment must contain a matching non-neutral vowel and no opposite-harmony vowel.
+Neutral-only and mixed-harmony segments are skipped. These are conservative repair filters,
+not grammatical claims: neutral-only words can legitimately take feminine suffixes.
 
-1. The preceding segment contains only supported Mongolian letters.
-2. For iyan, luγ-a and nuγud, it contains a masculine vowel (a/o/u) and no feminine vowel.
-3. For iyen, lüge and nügüd, it contains a feminine vowel (e/ee/oe/ue) and no masculine vowel.
-4. Neutral-only, mixed-harmony or control-bearing preceding segments are left unchanged.
-5. Only iyan/iyen additionally require a consonant-final preceding segment.
+Preceding segments may contain letters only, or a single final **consonant + MVS + A/E**
+(chachlag). This permits the existing corpus example `ᠨᠡᠷ᠎ᠡ ᠶᠦᠭᠡᠨ` to be repaired without
+altering its internal MVS. Other control-bearing contexts remain unchanged. Only iyan/iyen
+require a consonant-final segment; the other rules recognise the supplied spelling without
+choosing allomorphs. In suffix chains the check uses the immediately preceding segment.
 
-Plural repair does not select a plural allomorph or enforce a vowel-final stem: the existing
-corpus includes ger-nügüd. It recognises the already supplied suffix spelling. The luγ-a
-spelling contains an internal U+180E MVS, which is matched exactly and preserved. The independent
-word nüküd uses QA rather than the GA in nügüd and is not matched.
+### Every upstream entry
 
-These filters deliberately miss some valid cases. They reduce the expansion's scope without
-claiming to resolve all word/particle ambiguity. The original 19 spellings keep their existing
-heuristic behavior; they are not newly certified as grammatically unambiguous by this audit.
+`mvs` is the font builder's alias. The repair here inserts **NNBSP** for MenkLetter/Delehi,
+not a literal copy of that alias or a conversion of an existing MVS.
 
-## Validation and limits
+| Pinned upstream alias | Letters after separator | Decision | Reason |
+|---|---|---|---|
+| `u u` | ᠤᠤ | Not automatically repaired | No MVS requirement in font mapping; ordinary interrogative spacing is valid. |
+| `ue ue` | ᠦᠦ | Not automatically repaired | No MVS requirement in font mapping; ordinary interrogative spacing is valid. |
+| `b ue ue` | ᠪᠦᠦ | Not automatically repaired | No MVS requirement in font mapping; do not infer a suffix boundary. |
+| `mvs a` | ᠠ | Not automatically repaired | Ambiguous with chachlag A and exclamations; separator type needs lexical context. |
+| `mvs e` | ᠡ | Not automatically repaired | Ambiguous with chachlag E and exclamations; separator type needs lexical context. |
+| `mvs a ch a` | ᠠᠴᠠ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs a ch a g a n` | ᠠᠴᠠᠭᠠᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs i` | ᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs i y a r` | ᠢᠶᠠᠷ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs i y e r` | ᠢᠶᠡᠷ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs i y a n` | ᠢᠶᠠᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs i y e n` | ᠢᠶᠡᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs u` | ᠤ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs ue` | ᠦ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs u n` | ᠤᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs ue n` | ᠦᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs u d` | ᠤᠳ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs ue d` | ᠦᠳ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs ch u` | ᠴᠤ | Not automatically repaired | Discourse particle (even/also); particle-spacing convention cannot be inferred here. |
+| `mvs ch ue` | ᠴᠦ | Not automatically repaired | Discourse particle (even/also); particle-spacing convention cannot be inferred here. |
+| `mvs t u` | ᠲᠤ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs t ue` | ᠲᠦ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs t ue r` | ᠲᠦᠷ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs t ue n i` | ᠲᠦᠨᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs y ue g e n` | ᠶᠦᠭᠡᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs l ue g e` | ᠯᠦᠭᠡ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs n ue g ue d` | ᠨᠦᠭᠦᠳ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs n ue g e n` | ᠨᠦᠭᠡᠨ | Not automatically repaired | Comparator supplies shaping evidence but no morphological gloss; suffix use remains unresolved. |
+| `mvs y ue m` | ᠶᠦᠮ | Not automatically repaired | Copular/discourse use requires sentence context and a particle-spacing policy. |
+| `mvs y ue m s e n` | ᠶᠦᠮᠰᠡᠨ | Not automatically repaired | Copular/discourse use requires sentence context and a particle-spacing policy. |
+| `mvs h ue` | ᠬᠦ | Not automatically repaired | Only particle-shaping evidence established here; grammatical attachment remains unresolved. |
+| `mvs y i` | ᠶᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs y i n` | ᠶᠢᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d a g a n` | ᠳᠠᠭᠠᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d e g e n` | ᠳᠡᠭᠡᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d u` | ᠳᠤ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d ue` | ᠳᠦ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d a g` | ᠳᠠᠭ | Not automatically repaired | Comparator explicitly records conflicting NNBSP conventions (supported/not). |
+| `mvs d e g` | ᠳᠡᠭ | Not automatically repaired | Comparator explicitly records conflicting NNBSP conventions (supported/not). |
+| `mvs d a h i` | ᠳᠠᠬᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d e h i` | ᠳᠡᠬᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d u r` | ᠳᠤᠷ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d ue r` | ᠳᠦᠷ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d u n i` | ᠳᠤᠨᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d ue n i` | ᠳᠦᠨᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d u g a r` | ᠳᠤᠭᠠᠷ | Not automatically repaired | Ordinal needs numeral context; dugar also occurs as an independent token in the dictionary. |
+| `mvs d ue g e r` | ᠳᠦᠭᠡᠷ | Not automatically repaired | Ordinal family requires numeral recognition, which this repair does not implement. |
+| `mvs d a` | ᠳᠠ | Not automatically repaired | Modal-particle analysis is tentative in comparator; preserve ordinary spacing. |
+| `mvs d e` | ᠳᠡ | Not automatically repaired | Modal-particle analysis is tentative in comparator; preserve ordinary spacing. |
 
-With the meco backend pinned by this repository, both MenkLetter and Delehi produce:
+### Limits outside the Hudum table
 
-| Input written with visible separator labels | utn57_shape |
-|---|---|
-| ᠨᠣᠮ SPACE ᠢᠶᠠᠨ | `NOM AIYAA` |
-| ᠨᠣᠮ NNBSP ᠢᠶᠠᠨ | `NOMMvsIIAA` |
-| ᠭᠡᠷ SPACE ᠢᠶᠡᠨ | `GAR AIYAA` |
-| ᠭᠡᠷ NNBSP ᠢᠶᠡᠨ | `GARMvsIIAA` |
+The comparison documents contain more forms than the font table. Bar/ber, ban/ben and tai/tei
+remain excluded because a suffix-like spelling may also be an independent word (L2/18-293,
+sections 2 and 3). Nar/ner, personal possessives (mini, čini, etc.), negation ügei and directive
+uruγu also need lexical or convention-aware treatment before automatic repair. Other combined
+spellings in the comparison (uban/üben, duriyan/düriyen, tayiγan/teyigen) are not implemented
+by this bounded Hudum audit. Their absence is a coverage limit, not evidence against their
+suffix status. Caller-supplied correct NNBSP input continues to work through normal conversion.
 
-Regression tests compare repaired conversion with manual NNBSP input for every supported
-target, cover suffix chains and repeat-repair idempotence, and check that mismatched contexts,
-longer words, selectors and deferred particle forms remain untouched.
+## Validation
 
-These are conversion and rule tests, not independent font-pixel validation or a measured
-repair-precision result on human-labelled text. More forms should be added only with their
-source evidence, positive examples and counterexamples recorded alongside them.
+Tests compare repaired conversion with manual NNBSP input for every supported target and
+both supported source encodings. They cover default-off behavior, original UTF-8 byte offsets,
+suffix chains, punctuation, idempotence, final chachlag, mismatched harmony, longer words,
+unknown controls and each excluded font-table spelling in both masculine and feminine contexts.
+
+The existing Delehi corpus corroborates mal-ud, ger-üd, ger-nügüd, ger-lüge, bagši-daγan and
+ner-e-yügen. These are converter examples, not independent linguistic gold.
+The tests establish conversion behavior; they do not measure repair precision on human-labelled
+text or independently validate font pixels. Even supported spellings can be misclassified when
+quoted or used in an unusual context. The option remains explicit and off by default.

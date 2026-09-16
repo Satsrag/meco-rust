@@ -36,7 +36,23 @@ const SUFFIXES: &[&str] = &[
     "ᠯᠤᠭ\u{180E}ᠠ",
     "ᠯᠦᠭᠡ", // comitative; preserve the internal MVS in luγ-a
     "ᠨᠤᠭᠤᠳ",
-    "ᠨᠦᠭᠦᠳ", // plural; these six additions use suffix_context below
+    "ᠨᠦᠭᠦᠳ",
+    "ᠤᠳ",
+    "ᠦᠳ", // plural
+    "ᠳᠠᠭᠠᠨ",
+    "ᠳᠡᠭᠡᠨ",
+    "ᠲᠠᠭᠠᠨ",
+    "ᠲᠡᠭᠡᠨ", // reflexive dative
+    "ᠶᠤᠭᠠᠨ",
+    "ᠶᠦᠭᠡᠨ", // reflexive accusative
+    "ᠠᠴᠠᠭᠠᠨ",
+    "ᠡᠴᠡᠭᠡᠨ", // reflexive ablative
+    "ᠳᠤᠨᠢ",
+    "ᠳᠦᠨᠢ",
+    "ᠲᠤᠨᠢ",
+    "ᠲᠦᠨᠢ", // possessive dative
+    "ᠳᠠᠬᠢ",
+    "ᠳᠡᠬᠢ", // locative attributive; additions use suffix_context below
 ];
 
 fn letter(c: char) -> bool {
@@ -51,17 +67,35 @@ fn mongolian_word(s: &str) -> bool {
     s.chars().all(word_char) && s.chars().any(letter)
 }
 
-// Only the newly audited reflexives, comitatives and plurals use this gate. It is a filter, not a
-// grammar checker: decline neutral-only, mixed-harmony and control-bearing preceding segments.
+// Audited additions use this gate. It is a filter, not a grammar checker: decline neutral-only,
+// mixed-harmony and unknown control-bearing contexts. A final chachlag MVS+A/E is understood.
 // In a suffix chain, `previous` is the immediately preceding segment, not the entire stem.
 fn suffix_context(previous: &str, suffix: &str) -> bool {
     let needs_masculine = match suffix {
-        "ᠢᠶᠠᠨ" | "ᠯᠤᠭ\u{180E}ᠠ" | "ᠨᠤᠭᠤᠳ" => true,
-        "ᠢᠶᠡᠨ" | "ᠯᠦᠭᠡ" | "ᠨᠦᠭᠦᠳ" => false,
+        "ᠢᠶᠠᠨ"
+        | "ᠯᠤᠭ\u{180E}ᠠ"
+        | "ᠨᠤᠭᠤᠳ"
+        | "ᠤᠳ"
+        | "ᠳᠠᠭᠠᠨ"
+        | "ᠲᠠᠭᠠᠨ"
+        | "ᠶᠤᠭᠠᠨ"
+        | "ᠠᠴᠠᠭᠠᠨ"
+        | "ᠳᠤᠨᠢ"
+        | "ᠲᠤᠨᠢ"
+        | "ᠳᠠᠬᠢ" => true,
+        "ᠢᠶᠡᠨ" | "ᠯᠦᠭᠡ" | "ᠨᠦᠭᠦᠳ" | "ᠦᠳ" | "ᠳᠡᠭᠡᠨ" | "ᠲᠡᠭᠡᠨ" | "ᠶᠦᠭᠡᠨ" | "ᠡᠴᠡᠭᠡᠨ" | "ᠳᠦᠨᠢ"
+        | "ᠲᠦᠨᠢ" | "ᠳᠡᠬᠢ" => false,
         _ => return true,
     };
     if !previous.chars().all(letter) {
-        return false;
+        let before_tail = previous
+            .strip_suffix("\u{180E}ᠠ")
+            .or_else(|| previous.strip_suffix("\u{180E}ᠡ"));
+        if !before_tail.is_some_and(|stem| {
+            stem.chars().all(letter) && matches!(stem.chars().last(), Some('\u{1828}'..='\u{1842}'))
+        }) {
+            return false;
+        }
     }
     if matches!(suffix, "ᠢᠶᠠᠨ" | "ᠢᠶᠡᠨ")
         && !matches!(previous.chars().last(), Some('\u{1828}'..='\u{1842}'))
