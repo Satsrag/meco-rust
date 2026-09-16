@@ -2,7 +2,8 @@
 //!
 //! This is a spelling heuristic, not a morphological analyser. The small allowlist follows the
 //! separated case suffixes in https://unicode.org/L2/L2019/19130-mwg3-8-mong-spec-r.pdf.
-//! Ambiguous standalone forms such as bar (also "tiger") and tai are deliberately excluded.
+//! Forms such as bar (also "tiger") and tür (also "temporarily") are accepted only in the
+//! stem contexts where a corpus shows an ordinary space before them is almost always damage.
 //! See docs/suffix-separator-repair.md for the Hudum particle mapping audit: shaping support
 //! alone does not establish that an ordinary space is a damaged suffix separator.
 
@@ -52,7 +53,56 @@ const SUFFIXES: &[&str] = &[
     "ᠲᠤᠨᠢ",
     "ᠲᠦᠨᠢ", // possessive dative
     "ᠳᠠᠬᠢ",
-    "ᠳᠡᠬᠢ", // locative attributive; additions use suffix_context below
+    "ᠳᠡᠬᠢ",
+    "ᠲᠠᠬᠢ",
+    "ᠲᠡᠬᠢ",  // locative attributive; additions use suffix_context below
+    "ᠲᠡᠬᠡᠨ", // tegen: feminine g and k share ink, and this is the common corpus spelling
+    "ᠪᠠᠷ",
+    "ᠪᠡᠷ", // instrumental after vowels
+    "ᠪᠠᠨ",
+    "ᠪᠡᠨ", // reflexive after vowels
+    "ᠲᠠᠢ",
+    "ᠲᠡᠢ", // comitative
+    "ᠨᠠᠷ",
+    "ᠨᠡᠷ", // plural
+    "ᠳᠤᠭᠠᠷ",
+    "ᠳᠦᠭᠡᠷ", // ordinal, after digits only
+];
+
+// Masculine and feminine spellings with identical ink. Delehi writers use either one (the
+// golden corpus has mori ᠪᠡᠷ, nidü ᠪᠠᠨ, ken ᠲᠠᠢ), so only the stem's harmony is checked.
+const SHARED_INK: &[&str] = &["ᠪᠠᠷ", "ᠪᠡᠷ", "ᠪᠠᠨ", "ᠪᠡᠨ", "ᠲᠠᠢ", "ᠲᠡᠢ", "ᠨᠠᠷ", "ᠨᠡᠷ"];
+
+// Separated after a number in traditional text, including where a writer chose a plain space.
+// The spelling after digits is the writer's choice, so no harmony check applies.
+const AFTER_NUMBER: &[&str] = &[
+    "ᠶᠢᠨ",
+    "ᠤᠨ",
+    "ᠦᠨ",
+    "ᠤ",
+    "ᠦ",
+    "ᠶᠢ",
+    "ᠢ",
+    "ᠳᠤ",
+    "ᠳᠦ",
+    "ᠲᠤ",
+    "ᠲᠦ",
+    "ᠳᠤᠷ",
+    "ᠳᠦᠷ",
+    "ᠲᠤᠷ",
+    "ᠲᠦᠷ",
+    "ᠠᠴᠠ",
+    "ᠡᠴᠡ",
+    "ᠢᠶᠠᠷ",
+    "ᠢᠶᠡᠷ",
+    "ᠪᠠᠷ",
+    "ᠪᠡᠷ",
+    "ᠲᠠᠢ",
+    "ᠲᠡᠢ",
+    "ᠳᠠᠬᠢ",
+    "ᠳᠡᠬᠢ",
+    "ᠳᠤᠭᠠᠷ",
+    "ᠳᠦᠭᠡᠷ",
 ];
 
 fn letter(c: char) -> bool {
@@ -67,10 +117,40 @@ fn mongolian_word(s: &str) -> bool {
     s.chars().all(word_char) && s.chars().any(letter)
 }
 
+// Final consonants that select the T-initial allomorph (tu, tur, taki, tegen, ...).
+const T_SELECTING: &str = "ᠪᠭᠬᠷᠰᠱᠳᠲᠴᠺᠫᠹᠽᠼᠾ";
+
+fn digit(c: char) -> bool {
+    matches!(c, '0'..='9' | '\u{1810}'..='\u{1819}')
+}
+
+// A standalone number such as 25, 3.5 or ᠒᠐ ends immediately before the space. Digits glued
+// to letters (MP3, a Mongolian word) are not a number context.
+fn ends_with_number(before: &str) -> bool {
+    let run = before.len() - before.trim_end_matches(digit).len();
+    run > 0
+        && before[..before.len() - run]
+            .chars()
+            .next_back()
+            .map_or(true, |c| !c.is_alphanumeric() && !word_char(c))
+}
+
 // Audited additions use this gate. It is a filter, not a grammar checker: decline neutral-only,
 // mixed-harmony and unknown control-bearing contexts. A final chachlag MVS+A/E is understood.
 // In a suffix chain, `previous` is the immediately preceding segment, not the entire stem.
 fn suffix_context(previous: &str, suffix: &str) -> bool {
+    // T-initial allomorphs follow these consonants only. After a vowel or n, ᠲᠦᠷ is the
+    // independent word tür. The comitative tai/tei follows any stem.
+    if suffix.starts_with('ᠲ')
+        && !matches!(suffix, "ᠲᠠᠢ" | "ᠲᠡᠢ")
+        && !previous
+            .chars()
+            .rev()
+            .find(|&c| letter(c))
+            .is_some_and(|c| T_SELECTING.contains(c))
+    {
+        return false;
+    }
     let needs_masculine = match suffix {
         "ᠢᠶᠠᠨ"
         | "ᠯᠤᠭ\u{180E}ᠠ"
@@ -82,9 +162,12 @@ fn suffix_context(previous: &str, suffix: &str) -> bool {
         | "ᠠᠴᠠᠭᠠᠨ"
         | "ᠳᠤᠨᠢ"
         | "ᠲᠤᠨᠢ"
-        | "ᠳᠠᠬᠢ" => true,
+        | "ᠳᠠᠬᠢ"
+        | "ᠲᠠᠬᠢ" => true,
         "ᠢᠶᠡᠨ" | "ᠯᠦᠭᠡ" | "ᠨᠦᠭᠦᠳ" | "ᠦᠳ" | "ᠳᠡᠭᠡᠨ" | "ᠲᠡᠭᠡᠨ" | "ᠶᠦᠭᠡᠨ" | "ᠡᠴᠡᠭᠡᠨ" | "ᠳᠦᠨᠢ"
-        | "ᠲᠦᠨᠢ" | "ᠳᠡᠬᠢ" => false,
+        | "ᠲᠦᠨᠢ" | "ᠳᠡᠬᠢ" | "ᠲᠡᠬᠢ" | "ᠲᠡᠬᠡᠨ" => false,
+        "ᠳᠤᠭᠠᠷ" | "ᠳᠦᠭᠡᠷ" => return false, // dugar is also an independent word
+        _ if SHARED_INK.contains(&suffix) => true,
         _ => return true,
     };
     if !previous.chars().all(letter) {
@@ -102,9 +185,17 @@ fn suffix_context(previous: &str, suffix: &str) -> bool {
     {
         return false;
     }
+    // A chachlag stem ends in A/E and counts as vowel-final.
+    if matches!(suffix, "ᠪᠠᠷ" | "ᠪᠡᠷ" | "ᠪᠠᠨ" | "ᠪᠡᠨ")
+        && !matches!(previous.chars().last(), Some('\u{1820}'..='\u{1827}'))
+    {
+        return false;
+    }
     let masculine = previous.chars().any(|c| matches!(c, 'ᠠ' | 'ᠣ' | 'ᠤ'));
     let feminine = previous.chars().any(|c| matches!(c, 'ᠡ' | 'ᠧ' | 'ᠥ' | 'ᠦ'));
-    if needs_masculine {
+    if SHARED_INK.contains(&suffix) {
+        masculine != feminine
+    } else if needs_masculine {
         masculine && !feminine
     } else {
         feminine && !masculine
@@ -130,12 +221,18 @@ pub(crate) fn suffix_separators(
         if matches!(c, ' ' | '\u{00A0}') {
             let next = offset + c.len_utf8();
             let previous = &input[word_start..offset];
+            let word = mongolian_word(previous);
+            let number = previous.is_empty() && ends_with_number(&input[..offset]);
             // Bound the lookahead to the short suffix inventory. This also avoids copying or
             // rescanning arbitrary following words in a large document.
-            let suffix = SUFFIXES.iter().any(|suffix| {
-                input[next..].strip_prefix(suffix).is_some_and(|rest| {
-                    suffix_context(previous, suffix)
-                        && rest.chars().next().map_or(true, |c| {
+            let suffix = (word || number)
+                && SUFFIXES.iter().any(|suffix| {
+                    input[next..].strip_prefix(suffix).is_some_and(|rest| {
+                        (if word {
+                            suffix_context(previous, suffix)
+                        } else {
+                            AFTER_NUMBER.contains(suffix)
+                        }) && rest.chars().next().map_or(true, |c| {
                             c.is_whitespace()
                                 || matches!(
                                     c,
@@ -154,9 +251,9 @@ pub(crate) fn suffix_separators(
                                             | '\''
                                 )
                         })
-                })
-            });
-            if suffix && mongolian_word(previous) {
+                    })
+                });
+            if suffix {
                 out.push_str(&input[copied..offset]);
                 out.push('\u{202F}');
                 copied = next;

@@ -267,12 +267,6 @@ fn particle_shaping_support_does_not_automatically_enable_repair() {
             "ᠳᠦᠭᠡᠷ",
             "ᠳᠠ",
             "ᠳᠡ",
-            "ᠪᠠᠷ",
-            "ᠪᠡᠷ",
-            "ᠲᠠᠢ",
-            "ᠲᠡᠢ",
-            "ᠪᠠᠨ",
-            "ᠪᠡᠨ",
         ] {
             for stem in ["ᠨᠣᠮ", "ᠭᠡᠷ"] {
                 let raw = format!("{stem} {particle}");
@@ -280,6 +274,175 @@ fn particle_shaping_support_does_not_automatically_enable_repair() {
                 assert_eq!(result.text, raw);
                 assert!(result.warnings.is_empty(), "{particle}");
             }
+        }
+    }
+}
+
+const TARGETS: [CodeType; 7] = [
+    CodeType::MenkLetter,
+    CodeType::Delehi,
+    CodeType::MenkShape,
+    CodeType::Zvvnmod,
+    CodeType::Z52,
+    CodeType::Utn57,
+    CodeType::Utn57Shape,
+];
+
+fn assert_single_repair(from: CodeType, before: &str, suffix: &str) {
+    for separator in [' ', '\u{A0}'] {
+        let raw = format!("例：{before}{separator}{suffix}᠃");
+        let fixed = format!("例：{before}\u{202F}{suffix}᠃");
+        for to in TARGETS {
+            let result = translate_with_options(from, to, &raw, &REPAIR).unwrap();
+            assert_eq!(result.text, translate(from, to, &fixed).unwrap(), "{raw}");
+            assert_eq!(
+                result.warnings,
+                vec![Warning::RepairedSuffixSeparator {
+                    byte_offset: "例：".len() + before.len(),
+                    original: separator,
+                }],
+                "{raw}"
+            );
+        }
+        let again = translate_with_options(from, from, &fixed, &REPAIR).unwrap();
+        assert_eq!(again.text, fixed);
+        assert!(again.warnings.is_empty());
+    }
+}
+
+fn assert_unchanged(from: CodeType, raw: &str) {
+    let result = translate_with_options(from, from, raw, &REPAIR).unwrap();
+    assert_eq!(result.text, raw);
+    assert!(result.warnings.is_empty(), "{raw:?}");
+}
+
+#[test]
+fn shared_ink_suffix_pairs_accept_either_spelling_after_a_harmonic_stem() {
+    // Delehi golden corpus: mori ᠪᠡᠷ, nidü ᠪᠠᠨ and ken ᠲᠠᠢ. Each pair has identical ink,
+    // so the written a/e is not evidence of the stem's harmony.
+    let cases = [
+        ("ᠬᠣᠲᠠ", "ᠪᠠᠷ"),
+        ("ᠮᠣᠷᠢ", "ᠪᠡᠷ"),
+        ("ᠡᠭᠡᠴᠢ", "ᠪᠡᠷ"),
+        ("ᠨᠡᠷ\u{180E}ᠡ", "ᠪᠡᠷ"),
+        ("ᠬᠣᠲᠠ", "ᠪᠠᠨ"),
+        ("ᠨᠢᠳᠦ", "ᠪᠠᠨ"),
+        ("ᠡᠭᠡᠴᠢ", "ᠪᠡᠨ"),
+        ("ᠪᠠᠭᠰᠢ", "ᠲᠠᠢ"),
+        ("ᠬᠡᠨ", "ᠲᠠᠢ"),
+        ("ᠨᠣᠮ", "ᠲᠠᠢ"),
+        ("ᠭᠡᠷ", "ᠲᠡᠢ"),
+        ("ᠪᠠᠭᠱᠢ", "ᠨᠠᠷ"),
+        ("ᠡᠭᠡᠴᠢ", "ᠨᠡᠷ"),
+        ("ᠡᠵᠡᠨ", "ᠨᠡᠷ"),
+    ];
+    for from in [CodeType::MenkLetter, CodeType::Delehi] {
+        for (stem, suffix) in cases {
+            assert_single_repair(from, stem, suffix);
+        }
+        let chain = translate_with_options(from, from, "ᠪᠠᠭᠰᠢ ᠨᠠᠷ ᠲᠠᠢ", &REPAIR).unwrap();
+        assert_eq!(chain.text, "ᠪᠠᠭᠰᠢ\u{202F}ᠨᠠᠷ\u{202F}ᠲᠠᠢ");
+        assert_eq!(chain.warnings.len(), 2);
+        for raw in [
+            "ᠴᠠᠭᠠᠨ ᠪᠠᠷ", // consonant-final: bar is not the instrumental allomorph here
+            "ᠨᠣᠮ ᠪᠡᠷ",
+            "ᠨᠣᠮ ᠪᠠᠨ",
+            "ᠪᠢᠴᠢᠭ ᠲᠠᠢ", // neutral-only
+            "ᠪᠢᠴᠢ ᠪᠡᠷ",
+            "ᠨᠣᠡᠮ ᠲᠠᠢ", // mixed harmony
+            "ᠬᠣᠲᠠ ᠪᠠᠷᠰ",
+            "ᠬᠣᠲᠠ ᠪᠠᠷ\u{180B}",
+            "ᠬᠣᠲᠠ\u{200D} ᠪᠠᠷ",
+            "ᠬᠣᠲᠠ  ᠪᠠᠷ",
+            "ᠬᠣᠲᠠ\nᠪᠠᠷ",
+            "ᠪᠠᠭᠰᠢ ᠲᠠᠢᠢ",
+            "ᠪᠠᠭᠰᠢ ᠨᠠᠷ\u{180E}ᠠ",
+            "ᠲᠠᠢ",
+        ] {
+            assert_unchanged(from, raw);
+        }
+    }
+}
+
+#[test]
+fn t_initial_suffixes_follow_the_consonants_that_select_them() {
+    let cases = [
+        ("ᠡᠴᠦᠰ", "ᠲᠡᠬᠡᠨ"), // feminine g and k share ink; this is the corpus spelling of tegen
+        ("ᠭᠡᠷ", "ᠲᠡᠭᠡᠨ"),
+        ("ᠭᠠᠵᠠᠷ", "ᠲᠠᠬᠢ"),
+        ("ᠭᠡᠷ", "ᠲᠡᠬᠢ"),
+        ("ᠪᠢᠴᠢᠭ", "ᠲᠦ"),
+        ("ᠤᠯᠤᠰ", "ᠲᠤ"),
+        ("ᠭᠡᠷ", "ᠲᠦᠷ"),
+        ("ᠠᠪ", "ᠲᠤᠷ"),
+    ];
+    for from in [CodeType::MenkLetter, CodeType::Delehi] {
+        for (stem, suffix) in cases {
+            assert_single_repair(from, stem, suffix);
+        }
+        // A selector does not hide the final consonant.
+        let selected = translate_with_options(from, from, "ᠭᠡᠷ\u{180B} ᠲᠦ", &REPAIR).unwrap();
+        assert_eq!(selected.text, "ᠭᠡᠷ\u{180B}\u{202F}ᠲᠦ");
+        for raw in [
+            "ᠪᠤᠶᠤ ᠲᠦᠷ", // the independent word tür, not the dative
+            "ᠡᠭᠡᠴᠢ ᠲᠦᠷ",
+            "ᠨᠡᠷ\u{180E}ᠡ ᠲᠦᠷ",
+            "ᠬᠥᠮᠦᠨ ᠲᠦᠷ",
+            "ᠡᠭᠡᠴᠢ ᠲᠦ",
+            "ᠣᠶᠤᠲᠠᠨ ᠲᠤ",
+            "ᠬᠣᠲᠠ ᠲᠠᠬᠢ",
+            "ᠬᠣᠲᠠ ᠲᠠᠭᠠᠨ",
+            "ᠨᠣᠮ ᠲᠤᠨᠢ",
+            "ᠭᠡᠷ ᠲᠠᠬᠢ", // mismatched harmony
+            "ᠨᠣᠮ ᠲᠡᠬᠡᠨ",
+            "ᠡᠴᠦᠰ ᠲᠡᠬᠡᠨᠡ",
+        ] {
+            assert_unchanged(from, raw);
+        }
+    }
+}
+
+#[test]
+fn number_context_repairs_case_suffixes_and_ordinals() {
+    let cases = [
+        ("25", "ᠤ"),
+        ("2019", "ᠤᠨ"),
+        ("᠒᠐", "ᠶᠢᠨ"),
+        ("3.5", "ᠢ"),
+        ("10", "ᠳᠤ"),
+        ("2", "ᠲᠦ"),
+        ("7", "ᠡᠴᠡ"),
+        ("5", "ᠪᠡᠷ"),
+        ("95583", "ᠲᠠᠢ"),
+        ("1", "ᠳᠡᠬᠢ"),
+        ("3", "ᠳᠤᠭᠠᠷ"),
+        ("᠑", "ᠳᠦᠭᠡᠷ"),
+        ("12", "ᠳᠦᠭᠡᠷ"), // writer's choice of spelling is kept, not recomputed
+    ];
+    for from in [CodeType::MenkLetter, CodeType::Delehi] {
+        for (number, suffix) in cases {
+            assert_single_repair(from, number, suffix);
+        }
+        let chain = translate_with_options(from, from, "3 ᠳᠤᠭᠠᠷ ᠤᠨ", &REPAIR).unwrap();
+        assert_eq!(chain.text, "3\u{202F}ᠳᠤᠭᠠᠷ\u{202F}ᠤᠨ");
+        assert_eq!(chain.warnings.len(), 2);
+        for raw in [
+            "3 ᠤᠳ", // only case suffixes, comitative, dahi and ordinals follow numbers
+            "3 ᠨᠠᠷ",
+            "3 ᠪᠠᠨ",
+            "3 ᠳ\u{180B}ᠤᠭᠠᠷ", // FVS spelling already renders; left alone
+            "3 ᠳᠤᠭᠠᠷᠠ",
+            "3  ᠤ",
+            "3\nᠤ",
+            "3\u{202F}ᠤ",
+            "MP3 ᠪᠡᠷ",
+            "ᠨᠣᠮ3 ᠤ",
+            "x3 ᠤ",
+            "ᠡᠨᠡ ᠳᠤᠭᠠᠷ",
+            "ᠨᠢᠭᠡ ᠳᠦᠭᠡᠷ", // numeral words take attached ordinals
+            "ᠭᠤᠷᠪᠠᠨ ᠳᠤᠭᠠᠷ",
+        ] {
+            assert_unchanged(from, raw);
         }
     }
 }
@@ -372,7 +535,8 @@ fn preserves_layout_existing_controls_and_unrecognised_words() {
         "ᠤᠯᠤᠰ\u{180E}ᠤᠨ",
         "ᠤᠯᠤᠰ\u{202F}\u{202F}ᠤᠨ",
         "ᠴᠠᠭᠠᠨ ᠪᠠᠷ",
-        "ᠤᠯᠤᠰ ᠲᠠᠢ",
+        "Latin ᠲᠠᠢ",
+        "MP3 ᠪᠡᠷ",
         "ᠤᠯᠤᠰ ᠤᠨLatin",
         "ᠤᠯᠤᠰ ᠤᠨ_abc",
         "ᠤᠯᠤᠰ, ᠤᠨ",

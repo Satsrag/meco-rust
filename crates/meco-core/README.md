@@ -61,33 +61,43 @@ meco translate --from menk_letter --to menk_shape --repair-suffix-separators '�
 The option also works with stdin. Repairs are listed on stderr; stdout contains only converted
 text. Use `--` before a literal text argument that matches the option name.
 
-Repair is **off by default**. It replaces a single space (U+0020) or NBSP (U+00A0) between a
-Mongolian word and one of these exact suffix spellings with NNBSP (U+202F):
+Repair is **off by default**. It replaces a single space (U+0020) or NBSP (U+00A0) before one
+of the exact suffix spellings below with NNBSP (U+202F). A lost separator matters because a
+suffix after NNBSP is shaped as a particle, but the same letters after a space are shaped as an
+independent word. The preceding token must be a Mongolian word or a number.
+
+After a Mongolian word, the original 19 case suffixes are accepted with no further check,
+except that the T-initial forms need a final consonant that selects them (see below):
 
 `ᠶᠢᠨ`, `ᠤᠨ`, `ᠦᠨ`, `ᠤ`, `ᠦ`, `ᠶᠢ`, `ᠢ`, `ᠳᠤ`, `ᠳᠦ`, `ᠲᠤ`, `ᠲᠦ`,
 `ᠳᠤᠷ`, `ᠳᠦᠷ`, `ᠲᠤᠷ`, `ᠲᠦᠷ`, `ᠠᠴᠠ`, `ᠡᠴᠡ`, `ᠢᠶᠠᠷ`, `ᠢᠶᠡᠷ`.
 
-Another 22 spellings use a matching masculine/feminine vowel check: iyan/iyen, luγ-a/lüge,
-nuγud/nügüd, ud/üd, daγan/degen, taγan/tegen, yuγan/yügen, ačaγan/ečegen, duni/düni,
-tuni/tüni and dahi/dehi. Only iyan/iyen additionally require a consonant-final segment.
-The check skips mixed-harmony and neutral-only segments, and accepts a final consonant +
-MVS + A/E while leaving other control-bearing contexts unchanged. Internal MVS characters
-are preserved. In suffix chains the check uses the immediately preceding segment.
-The original 19 rules do not perform this additional context check.
+Another 25 spellings need a preceding segment with a single, non-neutral vowel harmony, and a
+suffix of the same harmony: iyan/iyen, luγ-a/lüge, nuγud/nügüd, ud/üd, daγan/degen,
+taγan/tegen (also `ᠲᠡᠬᠡᠨ`), yuγan/yügen, ačaγan/ečegen, duni/düni, tuni/tüni,
+dahi/dehi and taki/teki. Eight more accept either spelling after any such stem, because each
+pair has identical ink: bar/ber and ban/ben (vowel-final stem only), tai/tei and nar/ner.
+Iyan/iyen and every T-initial form except tai/tei need a stem ending in a consonant that selects
+it, such as ᠷ, ᠭ, ᠰ or ᠳ. The check skips mixed-harmony and neutral-only segments. It accepts a
+final consonant + MVS + A/E, leaves other control-bearing contexts unchanged and preserves
+internal MVS characters. In suffix chains the check uses the immediately preceding segment.
+
+After a number (`25 ᠤ`, `᠒᠐ ᠶᠢᠨ`, `3 ᠳᠤᠭᠠᠷ`), the original case suffixes, bar/ber, tai/tei,
+dahi/dehi and the ordinals duγar/düger are accepted as written. Ordinals are not repaired after
+words: numeral words take attached ordinals, and dugar is also an independent word.
 
 See the [particle mapping audit](../../docs/suffix-separator-repair.md) for the exact Unicode
-spellings, evidence and decisions for all 49 entries in the pinned font table. Repair supports
-41 spellings in total; this is not a complete Mongolian suffix inventory. Ordinal dugar/düger
-requires numeral context and is excluded, along with discourse particles whose separator
-convention cannot be inferred by this rule. A font's particle table is not a repair allowlist.
+spellings, the corpus evidence and the decisions for all 49 entries in the pinned font table.
+Repair supports 54 spellings in total; this is not a complete Mongolian suffix inventory.
+Particles whose normal separator is an ordinary space (`ᠴᠤ`, `ᠶᠤᠮ`, `ᠬᠦ`, `ᠨᠢ`, `ᠦᠭᠡᠢ`)
+are excluded. A font's particle table is not a repair allowlist.
 
 This is an explicit spelling heuristic, not grammatical validation: it cannot tell whether a
-suffix-like token was intended as a separate word or a quoted letter. Common ambiguous forms
-such as `ᠪᠠᠷ` (bar) and `ᠲᠠᠢ` (tai) are excluded. Concatenated words, FVS-bearing suffix
-spellings, existing NNBSP/MVS, tabs, newlines and runs of multiple spaces are left alone.
-The suffix inventory is based on the separated suffix examples in
-[L2/19-130](https://unicode.org/L2/L2019/19130-mwg3-8-mong-spec-r.pdf);
-the bar ambiguity is described in
+suffix-like token was intended as a separate word or a quoted letter. In two 50 MB corpus tests with
+every NNBSP removed, at least 99.78% of repairs restored an original NNBSP. Concatenated words,
+FVS-bearing suffix spellings, existing NNBSP/MVS, tabs, newlines and runs of multiple spaces are
+left alone. The suffix inventory is based on the separated suffix examples in
+[L2/19-130](https://unicode.org/L2/L2019/19130-mwg3-8-mong-spec-r.pdf) and
 [L2/18-293](https://www.unicode.org/L2/L2018/18293-nnbsp-solution.pdf).
 
 Each change returns `Warning::RepairedSuffixSeparator` with the **original input UTF-8 byte
