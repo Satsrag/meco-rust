@@ -32,7 +32,11 @@ const SUFFIXES: &[&str] = &[
     "ᠢᠶᠠᠷ",
     "ᠢᠶᠡᠷ", // instrumental (bar/ber excluded)
     "ᠢᠶᠠᠨ",
-    "ᠢᠶᠡᠨ", // reflexive; additionally gated by reflexive_context below
+    "ᠢᠶᠡᠨ", // reflexive
+    "ᠯᠤᠭ\u{180E}ᠠ",
+    "ᠯᠦᠭᠡ", // comitative; preserve the internal MVS in luγ-a
+    "ᠨᠤᠭᠤᠳ",
+    "ᠨᠦᠭᠦᠳ", // plural; these six additions use suffix_context below
 ];
 
 fn letter(c: char) -> bool {
@@ -47,24 +51,29 @@ fn mongolian_word(s: &str) -> bool {
     s.chars().all(word_char) && s.chars().any(letter)
 }
 
-// Only the newly audited reflexives use this extra gate. It is a conservative filter, not a
+// Only the newly audited reflexives, comitatives and plurals use this gate. It is a filter, not a
 // grammar checker: decline neutral-only, mixed-harmony and control-bearing preceding segments.
 // In a suffix chain, `previous` is the immediately preceding segment, not the entire stem.
-fn reflexive_context(previous: &str, suffix: &str) -> bool {
-    if !matches!(suffix, "ᠢᠶᠠᠨ" | "ᠢᠶᠡᠨ") {
-        return true;
+fn suffix_context(previous: &str, suffix: &str) -> bool {
+    let needs_masculine = match suffix {
+        "ᠢᠶᠠᠨ" | "ᠯᠤᠭ\u{180E}ᠠ" | "ᠨᠤᠭᠤᠳ" => true,
+        "ᠢᠶᠡᠨ" | "ᠯᠦᠭᠡ" | "ᠨᠦᠭᠦᠳ" => false,
+        _ => return true,
+    };
+    if !previous.chars().all(letter) {
+        return false;
     }
-    if !previous.chars().all(letter)
-        || !matches!(previous.chars().last(), Some('\u{1828}'..='\u{1842}'))
+    if matches!(suffix, "ᠢᠶᠠᠨ" | "ᠢᠶᠡᠨ")
+        && !matches!(previous.chars().last(), Some('\u{1828}'..='\u{1842}'))
     {
         return false;
     }
     let masculine = previous.chars().any(|c| matches!(c, 'ᠠ' | 'ᠣ' | 'ᠤ'));
     let feminine = previous.chars().any(|c| matches!(c, 'ᠡ' | 'ᠧ' | 'ᠥ' | 'ᠦ'));
-    match suffix {
-        "ᠢᠶᠠᠨ" => masculine && !feminine,
-        "ᠢᠶᠡᠨ" => feminine && !masculine,
-        _ => unreachable!(),
+    if needs_masculine {
+        masculine && !feminine
+    } else {
+        feminine && !masculine
     }
 }
 
@@ -91,7 +100,7 @@ pub(crate) fn suffix_separators(
             // rescanning arbitrary following words in a large document.
             let suffix = SUFFIXES.iter().any(|suffix| {
                 input[next..].strip_prefix(suffix).is_some_and(|rest| {
-                    reflexive_context(previous, suffix)
+                    suffix_context(previous, suffix)
                         && rest.chars().next().map_or(true, |c| {
                             c.is_whitespace()
                                 || matches!(

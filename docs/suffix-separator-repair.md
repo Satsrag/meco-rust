@@ -11,6 +11,12 @@ input. It is not a complete inventory of Mongolian suffixes or a grammatical cor
 - Supplementary [Gege suffix records](https://github.com/gege-mn/gege-converter/blob/d2351a64a987ca81d69db0f8c0dbca798020cf7b/src/data/suffixes.ts):
   the reflexive section describes iyan/iyen after consonants. This project's Cyrillic pairings
   and separation flags are explicitly provisional; it is supporting evidence, not independent gold.
+- [L2/18-293, section 3, printed page 12](https://www.unicode.org/L2/L2018/18293-nnbsp-solution.pdf)
+  explicitly discusses nuγud/nügüd and luγ-a/lüge as separately written suffixes.
+- [L2/10-279, section 2.1.4](https://www.unicode.org/L2/L2010/10279-mongolian-rendering.pdf)
+  identifies luγa/lüge as masculine/feminine comitative suffixes.
+- The existing [Delehi golden corpus](../crates/meco-core/tests/golden/corpus_delehi.txt)
+  includes `ᠭᠡᠷ ᠨᠦᠭᠦᠳ` and `ᠭᠡᠷ ᠯᠦᠭᠡ`. It supplies converter examples, not a grammar gold set.
 
 The pinned MNG particle data has **49 entries**: 3 without an MVS prefix, 46 with one. The local
 older font-builder checkout at b009d9cc has 47; the two added entries are `mvs a` and `mvs e`.
@@ -31,19 +37,26 @@ is erroneous. These mappings also cannot be blindly copied between font conventi
 | Forms (upstream aliases) | Decision | Reason |
 |---|---|---|
 | i y a n / i y e n | Add two context-gated repair spellings | Explicit MVS particle entries; supporting reflexive morphology; both source converters verified with manual NNBSP input. |
+| l ue g e; n ue g ue d | Add, together with masculine luγ-a and nuγud | Separate-suffix evidence in L2/18-293, corroborated by the existing Delehi corpus; both source converters verified with manual NNBSP input. |
 | u u / ue ue / b ue ue | Do not add | These three mappings do not require an MVS prefix. |
 | a / e | Do not add | A/E and MVS also participate in chachlag; a bare one-letter match does not establish a detached suffix. |
 | ch u / ch ue; y ue m / y ue m s e n; h ue; d a / d e | Defer | Particle shaping does not establish that a missing connector should be inferred in ordinary text. Context and convention evidence are needed. |
-| a ch a g a n; d a g a n / d e g e n; u d / ue d; n ue g ue d / n ue g e n; y ue g e n; l ue g e | Defer | Candidates for later morphology and standalone-word review; no automatic expansion from the font table. |
+| a ch a g a n; d a g a n / d e g e n; u d / ue d; n ue g e n; y ue g e n | Pending review | Not yet evaluated for repair in this change; this is not evidence that they are unsafe or should remain unsupported. |
 | t ue n i; d a g / d e g; d a h i / d e h i; d u n i / d ue n i; d u g a r / d ue g e r | Defer | Need source-specific spelling, boundary and ambiguity checks. |
 | bar / ber, tai / tei, ban / ben and other forms outside this table | No change | A separate review is needed; the table alone establishes neither completeness nor repair safety. |
 
-The two additions bring the recognised inventory to **21 spellings**, not 49. They require:
+The six additions bring the recognised inventory to **25 spellings**. They require:
 
-1. The preceding segment contains only supported Mongolian letters and ends in a consonant.
-2. For iyan, it contains a masculine vowel (a/o/u) and no feminine vowel.
-3. For iyen, it contains a feminine vowel (e/ee/oe/ue) and no masculine vowel.
+1. The preceding segment contains only supported Mongolian letters.
+2. For iyan, luγ-a and nuγud, it contains a masculine vowel (a/o/u) and no feminine vowel.
+3. For iyen, lüge and nügüd, it contains a feminine vowel (e/ee/oe/ue) and no masculine vowel.
 4. Neutral-only, mixed-harmony or control-bearing preceding segments are left unchanged.
+5. Only iyan/iyen additionally require a consonant-final preceding segment.
+
+Plural repair does not select a plural allomorph or enforce a vowel-final stem: the existing
+corpus includes ger-nügüd. It recognises the already supplied suffix spelling. The luγ-a
+spelling contains an internal U+180E MVS, which is matched exactly and preserved. The independent
+word nüküd uses QA rather than the GA in nügüd and is not matched.
 
 These filters deliberately miss some valid cases. They reduce the expansion's scope without
 claiming to resolve all word/particle ambiguity. The original 19 spellings keep their existing

@@ -75,6 +75,88 @@ fn reflexive_repair_declines_uncertain_contexts_and_longer_words() {
 }
 
 #[test]
+fn comitative_and_plural_repairs_preserve_spelling_across_targets() {
+    for from in [CodeType::MenkLetter, CodeType::Delehi] {
+        // The ger examples also occur with NNBSP in the existing Delehi golden corpus.
+        // Plural recognition must not require a vowel-final stem: ger ends in r.
+        for raw in [
+            "ᠭᠡᠷ ᠯᠦᠭᠡ",
+            "ᠭᠡᠷ ᠨᠦᠭᠦᠳ",
+            "ᠨᠣᠮ ᠯᠤᠭ\u{180E}ᠠ",
+            "ᠣᠶᠤᠲᠠᠨ ᠨᠤᠭᠤᠳ",
+            "ᠬᠣᠲᠠ ᠨᠤᠭᠤᠳ",
+            "ᠡᠭᠡᠴᠢ ᠨᠦᠭᠦᠳ",
+        ] {
+            let fixed = raw.replace(' ', "\u{202F}");
+            for separator in [' ', '\u{A0}'] {
+                let input = raw.replace(' ', &separator.to_string());
+                for to in [
+                    CodeType::MenkLetter,
+                    CodeType::Delehi,
+                    CodeType::MenkShape,
+                    CodeType::Zvvnmod,
+                    CodeType::Z52,
+                    CodeType::Utn57,
+                    CodeType::Utn57Shape,
+                ] {
+                    let result = translate_with_options(from, to, &input, &REPAIR).unwrap();
+                    assert_eq!(result.text, translate(from, to, &fixed).unwrap());
+                    assert_eq!(
+                        result.warnings,
+                        vec![Warning::RepairedSuffixSeparator {
+                            byte_offset: input.find(separator).unwrap(),
+                            original: separator,
+                        }]
+                    );
+                }
+            }
+            let again = translate_with_options(from, from, &fixed, &REPAIR).unwrap();
+            assert_eq!(again.text, fixed);
+            assert!(again.warnings.is_empty());
+        }
+        let chain = translate_with_options(from, from, "ᠭᠡᠷ ᠨᠦᠭᠦᠳ ᠦᠨ", &REPAIR).unwrap();
+        assert_eq!(chain.text, "ᠭᠡᠷ\u{202F}ᠨᠦᠭᠦᠳ\u{202F}ᠦᠨ");
+        assert_eq!(chain.warnings.len(), 2);
+    }
+}
+
+#[test]
+fn comitative_and_plural_repair_respects_context_and_boundaries() {
+    for from in [CodeType::MenkLetter, CodeType::Delehi] {
+        for (stem, suffix, wrong_stem) in [
+            ("ᠭᠡᠷ", "ᠯᠦᠭᠡ", "ᠨᠣᠮ"),
+            ("ᠭᠡᠷ", "ᠨᠦᠭᠦᠳ", "ᠨᠣᠮ"),
+            ("ᠨᠣᠮ", "ᠯᠤᠭ\u{180E}ᠠ", "ᠭᠡᠷ"),
+            ("ᠬᠣᠲᠠ", "ᠨᠤᠭᠤᠳ", "ᠭᠡᠷ"),
+        ] {
+            for raw in [
+                suffix.to_owned(),
+                format!("{wrong_stem} {suffix}"),
+                format!("ᠪᠢᠴᠢᠭ {suffix}"), // neutral-only, deliberately deferred
+                format!("ᠨᠣᠡᠮ {suffix}"),  // mixed harmony
+                format!("{stem}\u{180B} {suffix}"),
+                format!("{stem} {suffix}\u{180B}"),
+                format!("{stem} {suffix}ᠡ"),
+                format!("{stem} {suffix}x"),
+                format!("{stem}{suffix}"),
+                format!("{stem}  {suffix}"),
+                format!("{stem}\n{suffix}"),
+                format!("Latin {suffix}"),
+            ] {
+                let result = translate_with_options(from, from, &raw, &REPAIR).unwrap();
+                assert_eq!(result.text, raw);
+                assert!(result.warnings.is_empty(), "{raw:?}");
+            }
+        }
+        // The independent word nüküd has QA, not the GA of the plural nügüd.
+        let raw = "ᠭᠡᠷ ᠨᠦᠬᠦᠳ";
+        let result = translate_with_options(from, from, raw, &REPAIR).unwrap();
+        assert_eq!(result.text, raw);
+        assert!(result.warnings.is_empty());
+    }
+}
+
+#[test]
 fn particle_shaping_support_does_not_automatically_enable_repair() {
     // Deliberately deferred entries from the pinned Hudum particle mapping. This is an
     // exclusion regression, not a claim that these constructed phrases are grammatical.
@@ -92,8 +174,6 @@ fn particle_shaping_support_does_not_automatically_enable_repair() {
             "ᠴᠦ",
             "ᠲᠦᠨᠢ",
             "ᠶᠦᠭᠡᠨ",
-            "ᠯᠦᠭᠡ",
-            "ᠨᠦᠭᠦᠳ",
             "ᠨᠦᠭᠡᠨ",
             "ᠶᠦᠮ",
             "ᠶᠦᠮᠰᠡᠨ",
