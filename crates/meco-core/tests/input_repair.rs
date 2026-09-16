@@ -10,6 +10,122 @@ const RAW: &str = "ᠤᠯᠤᠰ ᠤᠨ";
 const FIXED: &str = "ᠤᠯᠤᠰ\u{202F}ᠤᠨ";
 
 #[test]
+fn audited_reflexives_match_manual_repairs_across_targets() {
+    for from in [CodeType::MenkLetter, CodeType::Delehi] {
+        for (raw, fixed, shape, edits) in [
+            ("ᠨᠣᠮ ᠢᠶᠠᠨ", "ᠨᠣᠮ\u{202F}ᠢᠶᠠᠨ", "NOMMvsIIAA", 1),
+            ("ᠭᠡᠷ\u{A0}ᠢᠶᠡᠨ", "ᠭᠡᠷ\u{202F}ᠢᠶᠡᠨ", "GARMvsIIAA", 1),
+        ] {
+            for to in [
+                CodeType::MenkLetter,
+                CodeType::Delehi,
+                CodeType::MenkShape,
+                CodeType::Zvvnmod,
+                CodeType::Z52,
+                CodeType::Utn57,
+                CodeType::Utn57Shape,
+            ] {
+                let result = translate_with_options(from, to, raw, &REPAIR).unwrap();
+                assert_eq!(result.text, translate(from, to, fixed).unwrap());
+                assert_eq!(result.warnings.len(), edits);
+                if to == CodeType::Utn57Shape {
+                    assert_eq!(result.text, shape);
+                }
+            }
+            let again = translate_with_options(from, from, fixed, &REPAIR).unwrap();
+            assert_eq!(again.text, fixed);
+            assert!(again.warnings.is_empty());
+        }
+        let chain = translate_with_options(from, from, "ᠤᠯᠤᠰ ᠤᠨ ᠢᠶᠠᠨ", &REPAIR).unwrap();
+        assert_eq!(chain.text, "ᠤᠯᠤᠰ\u{202F}ᠤᠨ\u{202F}ᠢᠶᠠᠨ");
+        assert_eq!(chain.warnings.len(), 2);
+        let existing = translate_with_options(from, from, "ᠭᠡᠷ\u{202F}ᠦᠨ ᠢᠶᠡᠨ", &REPAIR).unwrap();
+        assert_eq!(existing.text, "ᠭᠡᠷ\u{202F}ᠦᠨ\u{202F}ᠢᠶᠡᠨ");
+        assert_eq!(existing.warnings.len(), 1);
+    }
+}
+
+#[test]
+fn reflexive_repair_declines_uncertain_contexts_and_longer_words() {
+    for from in [CodeType::MenkLetter, CodeType::Delehi] {
+        for raw in [
+            "ᠭᠡᠷ ᠢᠶᠠᠨ",
+            "ᠨᠣᠮ ᠢᠶᠡᠨ", // mismatched harmony
+            "ᠬᠣᠲᠠ ᠢᠶᠠᠨ",
+            "ᠡᠭᠡᠴᠢ ᠢᠶᠡᠨ", // vowel-final
+            "ᠪᠢᠴᠢᠭ ᠢᠶᠠᠨ",
+            "ᠪᠢᠴᠢᠭ ᠢᠶᠡᠨ", // neutral-only: deliberately deferred
+            "ᠨᠣᠡᠮ ᠢᠶᠠᠨ",
+            "ᠨᠣᠡᠮ ᠢᠶᠡᠨ", // mixed-harmony input
+            "ᠨᠣᠮ\u{180B} ᠢᠶᠠᠨ",
+            "ᠭᠡᠷ\u{200D} ᠢᠶᠡᠨ", // controls
+            "ᠨᠣᠮ ᠢᠶᠠᠨ\u{180B}",
+            "ᠭᠡᠷ ᠢᠶᠡᠨᠡ",
+            "ᠨᠣᠮ ᠢᠶᠠᠨx",
+            "ᠨᠣᠮᠢᠶᠠᠨ",
+            "ᠭᠡᠷ\nᠢᠶᠡᠨ",
+            "ᠢᠶᠠᠨ",
+            "ᠢᠶᠡᠨ",
+        ] {
+            let result = translate_with_options(from, from, raw, &REPAIR).unwrap();
+            assert_eq!(result.text, raw);
+            assert!(result.warnings.is_empty(), "{raw:?}");
+        }
+    }
+}
+
+#[test]
+fn particle_shaping_support_does_not_automatically_enable_repair() {
+    // Deliberately deferred entries from the pinned Hudum particle mapping. This is an
+    // exclusion regression, not a claim that these constructed phrases are grammatical.
+    for from in [CodeType::MenkLetter, CodeType::Delehi] {
+        for particle in [
+            "ᠤᠤ",
+            "ᠦᠦ",
+            "ᠪᠦᠦ",
+            "ᠠ",
+            "ᠡ",
+            "ᠠᠴᠠᠭᠠᠨ",
+            "ᠤᠳ",
+            "ᠦᠳ",
+            "ᠴᠤ",
+            "ᠴᠦ",
+            "ᠲᠦᠨᠢ",
+            "ᠶᠦᠭᠡᠨ",
+            "ᠯᠦᠭᠡ",
+            "ᠨᠦᠭᠦᠳ",
+            "ᠨᠦᠭᠡᠨ",
+            "ᠶᠦᠮ",
+            "ᠶᠦᠮᠰᠡᠨ",
+            "ᠬᠦ",
+            "ᠳᠠᠭᠠᠨ",
+            "ᠳᠡᠭᠡᠨ",
+            "ᠳᠠᠭ",
+            "ᠳᠡᠭ",
+            "ᠳᠠᠬᠢ",
+            "ᠳᠡᠬᠢ",
+            "ᠳᠤᠨᠢ",
+            "ᠳᠦᠨᠢ",
+            "ᠳᠤᠭᠠᠷ",
+            "ᠳᠦᠭᠡᠷ",
+            "ᠳᠠ",
+            "ᠳᠡ",
+            "ᠪᠠᠷ",
+            "ᠪᠡᠷ",
+            "ᠲᠠᠢ",
+            "ᠲᠡᠢ",
+            "ᠪᠠᠨ",
+            "ᠪᠡᠨ",
+        ] {
+            let raw = format!("ᠨᠣᠮ {particle}");
+            let result = translate_with_options(from, from, &raw, &REPAIR).unwrap();
+            assert_eq!(result.text, raw);
+            assert!(result.warnings.is_empty(), "{particle}");
+        }
+    }
+}
+
+#[test]
 fn repair_precedes_decoding_for_every_target() {
     for from in [CodeType::MenkLetter, CodeType::Delehi] {
         for to in [

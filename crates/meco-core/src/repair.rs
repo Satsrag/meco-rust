@@ -3,6 +3,8 @@
 //! This is a spelling heuristic, not a morphological analyser. The small allowlist follows the
 //! separated case suffixes in https://unicode.org/L2/L2019/19130-mwg3-8-mong-spec-r.pdf.
 //! Ambiguous standalone forms such as bar (also "tiger") and tai are deliberately excluded.
+//! See docs/suffix-separator-repair.md for the Hudum particle mapping audit: shaping support
+//! alone does not establish that an ordinary space is a damaged suffix separator.
 
 use crate::{CodeType, MecoError, Warning};
 use std::borrow::Cow;
@@ -29,6 +31,8 @@ const SUFFIXES: &[&str] = &[
     "ᠡᠴᠡ", // ablative
     "ᠢᠶᠠᠷ",
     "ᠢᠶᠡᠷ", // instrumental (bar/ber excluded)
+    "ᠢᠶᠠᠨ",
+    "ᠢᠶᠡᠨ", // reflexive; additionally gated by reflexive_context below
 ];
 
 fn letter(c: char) -> bool {
@@ -41,6 +45,27 @@ fn word_char(c: char) -> bool {
 
 fn mongolian_word(s: &str) -> bool {
     s.chars().all(word_char) && s.chars().any(letter)
+}
+
+// Only the newly audited reflexives use this extra gate. It is a conservative filter, not a
+// grammar checker: decline neutral-only, mixed-harmony and control-bearing preceding segments.
+// In a suffix chain, `previous` is the immediately preceding segment, not the entire stem.
+fn reflexive_context(previous: &str, suffix: &str) -> bool {
+    if !matches!(suffix, "ᠢᠶᠠᠨ" | "ᠢᠶᠡᠨ") {
+        return true;
+    }
+    if !previous.chars().all(letter)
+        || !matches!(previous.chars().last(), Some('\u{1828}'..='\u{1842}'))
+    {
+        return false;
+    }
+    let masculine = previous.chars().any(|c| matches!(c, 'ᠠ' | 'ᠣ' | 'ᠤ'));
+    let feminine = previous.chars().any(|c| matches!(c, 'ᠡ' | 'ᠧ' | 'ᠥ' | 'ᠦ'));
+    match suffix {
+        "ᠢᠶᠠᠨ" => masculine && !feminine,
+        "ᠢᠶᠡᠨ" => feminine && !masculine,
+        _ => unreachable!(),
+    }
 }
 
 /// Replace a single ordinary or non-breaking space before an allowlisted suffix. All offsets
@@ -61,32 +86,34 @@ pub(crate) fn suffix_separators(
     for (offset, c) in input.char_indices() {
         if matches!(c, ' ' | '\u{00A0}') {
             let next = offset + c.len_utf8();
+            let previous = &input[word_start..offset];
             // Bound the lookahead to the short suffix inventory. This also avoids copying or
             // rescanning arbitrary following words in a large document.
             let suffix = SUFFIXES.iter().any(|suffix| {
                 input[next..].strip_prefix(suffix).is_some_and(|rest| {
-                    rest.chars().next().map_or(true, |c| {
-                        c.is_whitespace()
-                            || matches!(
-                                c,
-                                '\u{1800}'
-                                    ..='\u{1809}'
-                                        | '.'
-                                        | ','
-                                        | ';'
-                                        | ':'
-                                        | '!'
-                                        | '?'
-                                        | ')'
-                                        | ']'
-                                        | '}'
-                                        | '"'
-                                        | '\''
-                            )
-                    })
+                    reflexive_context(previous, suffix)
+                        && rest.chars().next().map_or(true, |c| {
+                            c.is_whitespace()
+                                || matches!(
+                                    c,
+                                    '\u{1800}'
+                                        ..='\u{1809}'
+                                            | '.'
+                                            | ','
+                                            | ';'
+                                            | ':'
+                                            | '!'
+                                            | '?'
+                                            | ')'
+                                            | ']'
+                                            | '}'
+                                            | '"'
+                                            | '\''
+                                )
+                        })
                 })
             });
-            if suffix && mongolian_word(&input[word_start..offset]) {
+            if suffix && mongolian_word(previous) {
                 out.push_str(&input[copied..offset]);
                 out.push('\u{202F}');
                 copied = next;
