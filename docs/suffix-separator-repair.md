@@ -21,8 +21,8 @@ spelling is therefore whether an ordinary space before it is, in practice, a los
   identifies luγa/lüge as masculine/feminine comitative suffixes.
 - The existing [Delehi golden corpus](../crates/meco-core/tests/golden/corpus_delehi.txt)
   includes `ᠭᠡᠷ ᠨᠦᠭᠦᠳ` and `ᠭᠡᠷ ᠯᠦᠭᠡ`. It supplies converter examples, not a grammar gold set.
-  It also writes `ᠮᠣᠷᠢ ᠪᠡᠷ`, `ᠨᠢᠳᠦ ᠪᠠᠨ` and `ᠬᠡᠨ ᠲᠠᠢ`: Delehi input chooses
-  between ink-identical masculine and feminine spellings freely.
+  It also writes `ᠮᠣᠷᠢ ᠪᠡᠷ`, `ᠨᠢᠳᠦ ᠪᠠᠨ` and `ᠬᠡᠨ ᠲᠠᠢ`: suffix harmony in Delehi
+  input does not follow the stem.
 - [CMLI-NLP Mongolian pretrain dataset](https://huggingface.co/datasets/CMLI-NLP/Mongolian-pretrain-dataset/tree/7c2eca2414f4b39c02af0affd173ce856563c870)
   (CC-BY-4.0, 12.33 GB, GB/T 25914 Unicode with NNBSP). Used for separator statistics and the
   end-to-end evaluation below. It is web-derived, not hand-labelled, and uses GB spellings
@@ -70,45 +70,48 @@ Additional comparison sources:
 
 | Family | Exact letter spellings | Evidence and repair policy |
 |---|---|---|
-| Original case suffixes | yin, un/ün, u/ü, yi/i, du/dü, tu/tü, dur/dür, tur/tür, ača/eče, iyar/iyer | Original 19 rules retained; no extra harmony gate. |
-| Reflexive | iyan/iyen | L2/18-293 Table 5; consonant-final preceding segment and matching harmony. |
-| Comitative | luγ-a/lüge | L2/18-293 Table 5 and Delehi corpus; matching harmony, preserve internal MVS. |
-| Plural | nuγud/nügüd, ud/üd | Both comparison tables and Delehi corpus; matching harmony, no plural-allomorph selection. |
-| Reflexive dative | daγan/degen, taγan/tegen | Both comparison tables; matching harmony. |
-| Reflexive accusative | yuγan/yügen | Both comparison tables, yügen also in Delehi corpus; matching harmony. |
-| Reflexive ablative | ačaγan/ečegen | Both comparison tables; matching harmony. |
-| Possessive dative | duni/düni, tuni/tüni | L2/19-368 Table 10; matching harmony. |
-| Locative-related nominal particles | dahi/dehi, taki/teki | Hudum and L2/19-368 Table 10; matching harmony. The comparator's precise grammatical gloss is tentative. |
-| Instrumental and reflexive after vowels | bar/ber, ban/ben | L2/18-293; corpus separator share below. Vowel-final (or chachlag) harmonic stem; either spelling. |
-| Modern comitative | tai/tei | Delehi corpus; corpus separator share below. Harmonic stem; either spelling. |
-| Plural of persons | nar/ner | Delehi corpus; corpus separator share below. Harmonic stem; either spelling. |
-| Reflexive dative, corpus spelling | tegen as `ᠲᠡᠬᠡᠨ` | Feminine g and k share ink. About 17,000 NNBSP and no ordinary-space occurrences in 300 MB of CMLI text. Matching harmony. |
-| Ordinal | duγar/düger | Hudum table. Only directly after a number; either spelling, since it depends on how the number is read. |
+| Original case suffixes | yin, un/ün, u/ü, yi/i, du/dü, tu/tü, dur/dür, tur/tür, ača/eče, iyar/iyer | Original 19 rules. |
+| Reflexive | iyan/iyen | L2/18-293 Table 5. |
+| Comitative | luγ-a/lüge | L2/18-293 Table 5 and Delehi corpus; internal MVS preserved. |
+| Plural | nuγud/nügüd, ud/üd | Both comparison tables and Delehi corpus. |
+| Reflexive dative | daγan/degen, taγan/tegen | Both comparison tables. |
+| Reflexive accusative | yuγan/yügen | Both comparison tables, yügen also in Delehi corpus. |
+| Reflexive ablative | ačaγan/ečegen | Both comparison tables. |
+| Possessive dative | duni/düni, tuni/tüni | L2/19-368 Table 10. |
+| Locative-related nominal particles | dahi/dehi, taki/teki | Hudum and L2/19-368 Table 10. The comparator's precise grammatical gloss is tentative. |
+| Instrumental and reflexive after vowels | bar/ber, ban/ben | L2/18-293; corpus separator share below. Vowel-final stem only. |
+| Modern comitative | tai/tei | Delehi corpus; corpus separator share below. |
+| Plural of persons | nar/ner | Delehi corpus; corpus separator share below. |
+| Reflexive dative, corpus spelling | tegen as `ᠲᠡᠬᠡᠨ` | Feminine g and k share ink. About 17,000 NNBSP and no ordinary-space occurrences in 300 MB of CMLI text. |
+| Ordinal | duγar/düger | Hudum table. Only directly after a number. |
 
-The additions beyond the original 19 use an explicit masculine/feminine vowel check.
-A preceding segment must contain a non-neutral vowel of one harmony only. Neutral-only and
-mixed-harmony segments are skipped. These are conservative repair filters, not grammatical
-claims: neutral-only words can legitimately take feminine suffixes.
+**No vowel-harmony check is made.** After NNBSP, a suffix renders the same whatever precedes
+it, so the repair only has to decide whether the ordinary space was a lost separator. The
+written masculine or feminine spelling is kept as supplied. The Delehi corpus itself pairs
+stems and suffixes freely (`ᠮᠣᠷᠢ ᠪᠡᠷ`, `ᠬᠡᠨ ᠲᠠᠢ`). An earlier revision required
+matching harmony and had stricter stem checks. On slice A below, those checks blocked about
+5,800 correct repairs to avoid about 80 wrong ones.
 
-For most additions the suffix must also match that harmony. The exception is bar/ber, ban/ben,
-tai/tei and nar/ner. Their two spellings have identical ink, and the Delehi corpus uses either
-one regardless of the stem, so any harmonic stem is accepted.
+The preceding token must be a Mongolian word or a standalone number. Letters are matched
+exactly, and variation selectors, ZWJ/ZWNJ and MVS in the stem are allowed. Only three rules
+look at the stem, and each exists because the same letters after that kind of stem are usually
+an independent word:
 
-Every T-initial suffix except tai/tei, **including the original tu/tü/tur/tür**, now requires
-the last letter of the preceding segment to be one of the consonants that select a T form:
-ᠪ ᠭ ᠬ ᠷ ᠰ ᠱ ᠳ ᠲ ᠴ ᠺ ᠫ ᠹ ᠽ ᠼ ᠾ. In the corpus these suffixes follow only such
-consonants. After a vowel or n, `ᠲᠦᠷ` is the independent word tür ("temporarily"). That case
-accounted for 312 of 312 `ᠲᠦᠷ` repairs before the check was added.
+1. **Ordinals** (duγar/düger) are repaired only after a **number**: ASCII or Mongolian digits,
+   optionally with a decimal point, and not attached to letters as in `MP3`. After a numeral
+   word the ordinal is attached, and after other words dugar is an independent token.
+   A number accepts every other spelling too, with no further check.
+2. **T-initial suffixes** except tai/tei, **including the original tu/tü/tur/tür**, require
+   the stem's last letter to be one of the consonants that select a T form:
+   ᠪ ᠭ ᠬ ᠷ ᠰ ᠱ ᠳ ᠲ ᠴ ᠺ ᠫ ᠹ ᠽ ᠼ ᠾ. After a vowel or n, `ᠲᠦᠷ` is the independent word tür
+   ("temporarily"). That case accounted for 312 of 312 `ᠲᠦᠷ` repairs without this rule.
+   The rule removes about 250 wrong repairs and loses 6 correct ones.
+3. **Bar/ber and ban/ben** require the stem to end in a vowel or ᠶ (a diphthong). Stems
+   ending in chachlag A/E count as vowel-final. After a consonant, bar is usually an
+   independent word (`ᠴᠠᠭᠠᠨ ᠪᠠᠷ` "white tiger", a transliterated "bar").
 
-A preceding **number** (ASCII or Mongolian digits, optionally with a decimal point, and not
-attached to letters as in `MP3`) is also a suffix context. The spellings accepted there are the
-original case suffixes, bar/ber, tai/tei, dahi/dehi and the ordinals, with no harmony check.
-
-Preceding segments may contain letters only, or a single final **consonant + MVS + A/E**
-(chachlag). This permits the existing corpus example `ᠨᠡᠷ᠎ᠡ ᠶᠦᠭᠡᠨ` to be repaired without
-altering its internal MVS. Other control-bearing contexts remain unchanged. Iyan/iyen and
-the T-initial forms require a consonant-final segment, and bar/ber and ban/ben a vowel-final
-one. The other rules recognise the supplied spelling without choosing allomorphs. In suffix chains the check uses the immediately preceding segment.
+The other spellings are recognised as supplied, without choosing allomorphs. In suffix chains
+the rules use the immediately preceding segment.
 
 ### Every upstream entry
 
@@ -122,46 +125,46 @@ not a literal copy of that alias or a conversion of an existing MVS.
 | `b ue ue` | ᠪᠦᠦ | Not automatically repaired | No MVS requirement in font mapping; do not infer a suffix boundary. |
 | `mvs a` | ᠠ | Not automatically repaired | Chachlag uses MVS, not NNBSP. A standalone ᠠ after a space is a vocative (`ᠪᠠᠭᠰᠢ ᠠ᠂`) or a transliteration, not a lost separator. |
 | `mvs e` | ᠡ | Not automatically repaired | As for ᠠ (`ᠡᠵᠡᠨ ᠡ!`). |
-| `mvs a ch a` | ᠠᠴᠠ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs a ch a g a n` | ᠠᠴᠠᠭᠠᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs i` | ᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs i y a r` | ᠢᠶᠠᠷ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs i y e r` | ᠢᠶᠡᠷ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs i y a n` | ᠢᠶᠠᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs i y e n` | ᠢᠶᠡᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs u` | ᠤ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs ue` | ᠦ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs u n` | ᠤᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs ue n` | ᠦᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs u d` | ᠤᠳ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs ue d` | ᠦᠳ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs a ch a` | ᠠᠴᠠ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs a ch a g a n` | ᠠᠴᠠᠭᠠᠨ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs i` | ᠢ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs i y a r` | ᠢᠶᠠᠷ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs i y e r` | ᠢᠶᠡᠷ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs i y a n` | ᠢᠶᠠᠨ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs i y e n` | ᠢᠶᠡᠨ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs u` | ᠤ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs ue` | ᠦ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs u n` | ᠤᠨ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs ue n` | ᠦᠨ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs u d` | ᠤᠳ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs ue d` | ᠦᠳ | Supported | Exact detached-suffix spelling; see the family review above. |
 | `mvs ch u` | ᠴᠤ | Not automatically repaired | Ordinary space is the convention: 99% of 61,000 corpus occurrences. |
 | `mvs ch ue` | ᠴᠦ | Not automatically repaired | Ordinary space is the convention: 99% of 56,000 corpus occurrences. |
-| `mvs t u` | ᠲᠤ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs t ue` | ᠲᠦ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs t ue r` | ᠲᠦᠷ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs t ue n i` | ᠲᠦᠨᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs y ue g e n` | ᠶᠦᠭᠡᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs l ue g e` | ᠯᠦᠭᠡ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs n ue g ue d` | ᠨᠦᠭᠦᠳ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs t u` | ᠲᠤ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs t ue` | ᠲᠦ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs t ue r` | ᠲᠦᠷ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs t ue n i` | ᠲᠦᠨᠢ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs y ue g e n` | ᠶᠦᠭᠡᠨ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs l ue g e` | ᠯᠦᠭᠡ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs n ue g ue d` | ᠨᠦᠭᠦᠳ | Supported | Exact detached-suffix spelling; see the family review above. |
 | `mvs n ue g e n` | ᠨᠦᠭᠡᠨ | Not automatically repaired | Rare, and never with NNBSP in the corpus (87 occurrences). |
 | `mvs y ue m` | ᠶᠦᠮ | Not automatically repaired | Ordinary space is the convention: `ᠶᠤᠮ` has 91,000 corpus occurrences, over 99% after a space. |
 | `mvs y ue m s e n` | ᠶᠦᠮᠰᠡᠨ | Not automatically repaired | Not found detached with NNBSP in the corpus; same convention as ᠶᠦᠮ. |
 | `mvs h ue` | ᠬᠦ | Not automatically repaired | Ordinary space is the convention: 97% of 52,000 corpus occurrences. |
-| `mvs y i` | ᠶᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs y i n` | ᠶᠢᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs d a g a n` | ᠳᠠᠭᠠᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs d e g e n` | ᠳᠡᠭᠡᠨ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs d u` | ᠳᠤ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs d ue` | ᠳᠦ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs y i` | ᠶᠢ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs y i n` | ᠶᠢᠨ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs d a g a n` | ᠳᠠᠭᠠᠨ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs d e g e n` | ᠳᠡᠭᠡᠨ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs d u` | ᠳᠤ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs d ue` | ᠳᠦ | Supported | Exact detached-suffix spelling; see the family review above. |
 | `mvs d a g` | ᠳᠠᠭ | Not automatically repaired | Comparator records conflicting conventions; the corpus writes it attached (2 detached tokens in 300 MB). |
 | `mvs d e g` | ᠳᠡᠭ | Not automatically repaired | As for ᠳᠠᠭ (no detached tokens). |
-| `mvs d a h i` | ᠳᠠᠬᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs d e h i` | ᠳᠡᠬᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs d u r` | ᠳᠤᠷ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs d ue r` | ᠳᠦᠷ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs d u n i` | ᠳᠤᠨᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
-| `mvs d ue n i` | ᠳᠦᠨᠢ | Supported (context gates apply to additions) | Exact detached-suffix spelling; see family review below. |
+| `mvs d a h i` | ᠳᠠᠬᠢ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs d e h i` | ᠳᠡᠬᠢ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs d u r` | ᠳᠤᠷ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs d ue r` | ᠳᠦᠷ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs d u n i` | ᠳᠤᠨᠢ | Supported | Exact detached-suffix spelling; see the family review above. |
+| `mvs d ue n i` | ᠳᠦᠨᠢ | Supported | Exact detached-suffix spelling; see the family review above. |
 | `mvs d u g a r` | ᠳᠤᠭᠠᠷ | Supported after a number only | After a numeral word the ordinal is attached (`ᠭᠤᠷᠪᠠᠳᠤᠭᠠᠷ`), and after an ordinary word dugar is an independent token (Mongoltoli). A spelling with an FVS, which the corpus uses after a space, already renders and is left alone. |
 | `mvs d ue g e r` | ᠳᠦᠭᠡᠷ | Supported after a number only | As for ᠳᠤᠭᠠᠷ. |
 | `mvs d a` | ᠳᠠ | Not automatically repaired | Modal-particle analysis is tentative, and there are only 6 detached tokens in 300 MB. |
@@ -196,13 +199,14 @@ Many "false" repairs after numbers are genuine suffixes the writer spaced (`7 �
 | Slice | Version | Repairs | Precision | Recall of all NNBSP |
 |---|---|---:|---:|---:|
 | A | before this revision | 605,141 | 99.766% | 80.6% |
-| A | this revision | 642,811 | 99.784% | 85.7% |
+| A | this revision | 648,714 | 99.774% | 86.4% |
+| A | no stem rules at all | 649,036 | 99.729% | 86.4% |
 | B | before this revision | 603,992 | 99.783% | 81.0% |
-| B | this revision | 641,617 | 99.802% | 86.1% |
+| B | this revision | 647,593 | 99.792% | 86.9% |
+| B | no stem rules at all | 647,901 | 99.746% | 86.9% |
 
 The largest remaining gaps are GB spellings this repair does not accept as Menk/Delehi input
-(`ᠲᠠᠶ`/`ᠲᠡᠶ`, FVS-marked `ᠳ᠋ᠤ`). The gates also decline some valid cases (for example
-neutral-only stems). The largest remaining false-repair groups predate this revision:
+(`ᠲᠠᠶ`/`ᠲᠡᠶ`, FVS-marked `ᠳ᠋ᠤ`). The largest remaining false-repair groups predate this revision:
 `ᠢ` and `ᠶᠢᠨ` after transliterated names. `ᠲᠦᠷ` after an r-final word is still sometimes the
 word tür: 67 repairs, none correct, in slice A. `ᠲᠠᠢ` is mostly a transliteration in GB text,
 where the comitative is spelled `ᠲᠠᠶ`, so its GB precision does not reflect Delehi input.
@@ -210,9 +214,10 @@ where the comitative is spelled `ᠲᠠᠶ`, so its GB precision does not reflec
 ## Validation
 
 Tests compare repaired conversion with manual NNBSP input for every supported target and
-both supported source encodings, including number contexts and the shared-ink pairs. They cover default-off behavior, original UTF-8 byte offsets,
-suffix chains, punctuation, idempotence, final chachlag, mismatched harmony, longer words,
-unknown controls and each excluded font-table spelling in both masculine and feminine contexts.
+both supported source encodings. They cover number contexts, default-off behavior, original
+UTF-8 byte offsets, suffix chains, punctuation, idempotence, final chachlag, mixed or
+mismatched harmony (repaired as written), controls in the stem, the three stem rules, longer
+words, and each excluded font-table spelling in both masculine and feminine contexts.
 
 The existing Delehi corpus corroborates mal-ud, ger-üd, ger-nügüd, ger-lüge, bagši-daγan and
 ner-e-yügen. These are converter examples, not independent linguistic gold.

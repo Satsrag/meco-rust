@@ -66,25 +66,28 @@ of the exact suffix spellings below with NNBSP (U+202F). A lost separator matter
 suffix after NNBSP is shaped as a particle, but the same letters after a space are shaped as an
 independent word. The preceding token must be a Mongolian word or a number.
 
-After a Mongolian word, the original 19 case suffixes are accepted with no further check,
-except that the T-initial forms need a final consonant that selects them (see below):
+The suffix spellings are the original 19 case suffixes
 
 `ᠶᠢᠨ`, `ᠤᠨ`, `ᠦᠨ`, `ᠤ`, `ᠦ`, `ᠶᠢ`, `ᠢ`, `ᠳᠤ`, `ᠳᠦ`, `ᠲᠤ`, `ᠲᠦ`,
-`ᠳᠤᠷ`, `ᠳᠦᠷ`, `ᠲᠤᠷ`, `ᠲᠦᠷ`, `ᠠᠴᠠ`, `ᠡᠴᠡ`, `ᠢᠶᠠᠷ`, `ᠢᠶᠡᠷ`.
+`ᠳᠤᠷ`, `ᠳᠦᠷ`, `ᠲᠤᠷ`, `ᠲᠦᠷ`, `ᠠᠴᠠ`, `ᠡᠴᠡ`, `ᠢᠶᠠᠷ`, `ᠢᠶᠡᠷ`,
 
-Another 25 spellings need a preceding segment with a single, non-neutral vowel harmony, and a
-suffix of the same harmony: iyan/iyen, luγ-a/lüge, nuγud/nügüd, ud/üd, daγan/degen,
-taγan/tegen (also `ᠲᠡᠬᠡᠨ`), yuγan/yügen, ačaγan/ečegen, duni/düni, tuni/tüni,
-dahi/dehi and taki/teki. Eight more accept either spelling after any such stem, because each
-pair has identical ink: bar/ber and ban/ben (vowel-final stem only), tai/tei and nar/ner.
-Iyan/iyen and every T-initial form except tai/tei need a stem ending in a consonant that selects
-it, such as ᠷ, ᠭ, ᠰ or ᠳ. The check skips mixed-harmony and neutral-only segments. It accepts a
-final consonant + MVS + A/E, leaves other control-bearing contexts unchanged and preserves
-internal MVS characters. In suffix chains the check uses the immediately preceding segment.
+plus iyan/iyen, luγ-a/lüge, nuγud/nügüd, ud/üd, daγan/degen, taγan/tegen (also `ᠲᠡᠬᠡᠨ`),
+yuγan/yügen, ačaγan/ečegen, duni/düni, tuni/tüni, dahi/dehi, taki/teki, bar/ber, ban/ben,
+tai/tei, nar/ner and the ordinals duγar/düger.
 
-After a number (`25 ᠤ`, `᠒᠐ ᠶᠢᠨ`, `3 ᠳᠤᠭᠠᠷ`), the original case suffixes, bar/ber, tai/tei,
-dahi/dehi and the ordinals duγar/düger are accepted as written. Ordinals are not repaired after
-words: numeral words take attached ordinals, and dugar is also an independent word.
+No vowel-harmony check is made: after NNBSP a suffix renders the same whatever precedes it, and
+the written spelling is kept. Three rules decline stems after which the same letters are usually
+an independent word:
+
+- Ordinals are repaired only after a number (`3 ᠳᠤᠭᠠᠷ`), since dugar is also a word. A number
+  (`25 ᠤ`, `᠒᠐ ᠶᠢᠨ`) accepts every other suffix as well.
+- T-initial suffixes other than tai/tei need a stem ending in a consonant that selects them,
+  such as ᠷ, ᠭ, ᠰ or ᠳ; after a vowel, `ᠲᠦᠷ` is the word tür.
+- Bar/ber and ban/ben need a stem ending in a vowel or ᠶ, so `ᠴᠠᠭᠠᠨ ᠪᠠᠷ` ("white tiger")
+  is left alone.
+
+Stems may contain variation selectors, ZWJ/ZWNJ or MVS, and internal MVS characters
+in suffixes are preserved. In suffix chains the rules use the immediately preceding segment.
 
 See the [particle mapping audit](../../docs/suffix-separator-repair.md) for the exact Unicode
 spellings, the corpus evidence and the decisions for all 49 entries in the pinned font table.
@@ -94,7 +97,7 @@ are excluded. A font's particle table is not a repair allowlist.
 
 This is an explicit spelling heuristic, not grammatical validation: it cannot tell whether a
 suffix-like token was intended as a separate word or a quoted letter. In two 50 MB corpus tests with
-every NNBSP removed, at least 99.78% of repairs restored an original NNBSP. Concatenated words,
+every NNBSP removed, at least 99.77% of repairs restored an original NNBSP. Concatenated words,
 FVS-bearing suffix spellings, existing NNBSP/MVS, tabs, newlines and runs of multiple spaces are
 left alone. The suffix inventory is based on the separated suffix examples in
 [L2/19-130](https://unicode.org/L2/L2019/19130-mwg3-8-mong-spec-r.pdf) and

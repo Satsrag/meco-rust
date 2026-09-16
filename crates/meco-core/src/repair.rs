@@ -66,43 +66,7 @@ const SUFFIXES: &[&str] = &[
     "ᠨᠠᠷ",
     "ᠨᠡᠷ", // plural
     "ᠳᠤᠭᠠᠷ",
-    "ᠳᠦᠭᠡᠷ", // ordinal, after digits only
-];
-
-// Masculine and feminine spellings with identical ink. Delehi writers use either one (the
-// golden corpus has mori ᠪᠡᠷ, nidü ᠪᠠᠨ, ken ᠲᠠᠢ), so only the stem's harmony is checked.
-const SHARED_INK: &[&str] = &["ᠪᠠᠷ", "ᠪᠡᠷ", "ᠪᠠᠨ", "ᠪᠡᠨ", "ᠲᠠᠢ", "ᠲᠡᠢ", "ᠨᠠᠷ", "ᠨᠡᠷ"];
-
-// Separated after a number in traditional text, including where a writer chose a plain space.
-// The spelling after digits is the writer's choice, so no harmony check applies.
-const AFTER_NUMBER: &[&str] = &[
-    "ᠶᠢᠨ",
-    "ᠤᠨ",
-    "ᠦᠨ",
-    "ᠤ",
-    "ᠦ",
-    "ᠶᠢ",
-    "ᠢ",
-    "ᠳᠤ",
-    "ᠳᠦ",
-    "ᠲᠤ",
-    "ᠲᠦ",
-    "ᠳᠤᠷ",
-    "ᠳᠦᠷ",
-    "ᠲᠤᠷ",
-    "ᠲᠦᠷ",
-    "ᠠᠴᠠ",
-    "ᠡᠴᠡ",
-    "ᠢᠶᠠᠷ",
-    "ᠢᠶᠡᠷ",
-    "ᠪᠠᠷ",
-    "ᠪᠡᠷ",
-    "ᠲᠠᠢ",
-    "ᠲᠡᠢ",
-    "ᠳᠠᠬᠢ",
-    "ᠳᠡᠬᠢ",
-    "ᠳᠤᠭᠠᠷ",
-    "ᠳᠦᠭᠡᠷ",
+    "ᠳᠦᠭᠡᠷ", // ordinal, after numbers only
 ];
 
 fn letter(c: char) -> bool {
@@ -135,70 +99,22 @@ fn ends_with_number(before: &str) -> bool {
             .map_or(true, |c| !c.is_alphanumeric() && !word_char(c))
 }
 
-// Audited additions use this gate. It is a filter, not a grammar checker: decline neutral-only,
-// mixed-harmony and unknown control-bearing contexts. A final chachlag MVS+A/E is understood.
-// In a suffix chain, `previous` is the immediately preceding segment, not the entire stem.
+// Rendering after NNBSP depends only on the suffix, so no vowel-harmony check is made. These
+// rules only decline stems after which the same letters are usually an independent word.
 fn suffix_context(previous: &str, suffix: &str) -> bool {
-    // T-initial allomorphs follow these consonants only. After a vowel or n, ᠲᠦᠷ is the
-    // independent word tür. The comitative tai/tei follows any stem.
-    if suffix.starts_with('ᠲ')
-        && !matches!(suffix, "ᠲᠠᠢ" | "ᠲᠡᠢ")
-        && !previous
-            .chars()
-            .rev()
-            .find(|&c| letter(c))
-            .is_some_and(|c| T_SELECTING.contains(c))
-    {
-        return false;
-    }
-    let needs_masculine = match suffix {
-        "ᠢᠶᠠᠨ"
-        | "ᠯᠤᠭ\u{180E}ᠠ"
-        | "ᠨᠤᠭᠤᠳ"
-        | "ᠤᠳ"
-        | "ᠳᠠᠭᠠᠨ"
-        | "ᠲᠠᠭᠠᠨ"
-        | "ᠶᠤᠭᠠᠨ"
-        | "ᠠᠴᠠᠭᠠᠨ"
-        | "ᠳᠤᠨᠢ"
-        | "ᠲᠤᠨᠢ"
-        | "ᠳᠠᠬᠢ"
-        | "ᠲᠠᠬᠢ" => true,
-        "ᠢᠶᠡᠨ" | "ᠯᠦᠭᠡ" | "ᠨᠦᠭᠦᠳ" | "ᠦᠳ" | "ᠳᠡᠭᠡᠨ" | "ᠲᠡᠭᠡᠨ" | "ᠶᠦᠭᠡᠨ" | "ᠡᠴᠡᠭᠡᠨ" | "ᠳᠦᠨᠢ"
-        | "ᠲᠦᠨᠢ" | "ᠳᠡᠬᠢ" | "ᠲᠡᠬᠢ" | "ᠲᠡᠬᠡᠨ" => false,
-        "ᠳᠤᠭᠠᠷ" | "ᠳᠦᠭᠡᠷ" => return false, // dugar is also an independent word
-        _ if SHARED_INK.contains(&suffix) => true,
-        _ => return true,
-    };
-    if !previous.chars().all(letter) {
-        let before_tail = previous
-            .strip_suffix("\u{180E}ᠠ")
-            .or_else(|| previous.strip_suffix("\u{180E}ᠡ"));
-        if !before_tail.is_some_and(|stem| {
-            stem.chars().all(letter) && matches!(stem.chars().last(), Some('\u{1828}'..='\u{1842}'))
-        }) {
-            return false;
+    let last = previous.chars().rev().find(|&c| letter(c));
+    match suffix {
+        // Ordinals are repaired after numbers only: dugar is also an independent word.
+        "ᠳᠤᠭᠠᠷ" | "ᠳᠦᠭᠡᠷ" => false,
+        "ᠲᠠᠢ" | "ᠲᠡᠢ" => true,
+        // After a vowel or n, ᠲᠦᠷ is the independent word tür.
+        _ if suffix.starts_with('ᠲ') => last.is_some_and(|c| T_SELECTING.contains(c)),
+        // After a consonant, bar is usually the independent word (tiger, bar). A final ᠶ is a
+        // diphthong, and a chachlag stem ends in A/E.
+        "ᠪᠠᠷ" | "ᠪᠡᠷ" | "ᠪᠠᠨ" | "ᠪᠡᠨ" => {
+            last.is_some_and(|c| c <= '\u{1827}' || c == 'ᠶ')
         }
-    }
-    if matches!(suffix, "ᠢᠶᠠᠨ" | "ᠢᠶᠡᠨ")
-        && !matches!(previous.chars().last(), Some('\u{1828}'..='\u{1842}'))
-    {
-        return false;
-    }
-    // A chachlag stem ends in A/E and counts as vowel-final.
-    if matches!(suffix, "ᠪᠠᠷ" | "ᠪᠡᠷ" | "ᠪᠠᠨ" | "ᠪᠡᠨ")
-        && !matches!(previous.chars().last(), Some('\u{1820}'..='\u{1827}'))
-    {
-        return false;
-    }
-    let masculine = previous.chars().any(|c| matches!(c, 'ᠠ' | 'ᠣ' | 'ᠤ'));
-    let feminine = previous.chars().any(|c| matches!(c, 'ᠡ' | 'ᠧ' | 'ᠥ' | 'ᠦ'));
-    if SHARED_INK.contains(&suffix) {
-        masculine != feminine
-    } else if needs_masculine {
-        masculine && !feminine
-    } else {
-        feminine && !masculine
+        _ => true,
     }
 }
 
@@ -228,29 +144,26 @@ pub(crate) fn suffix_separators(
             let suffix = (word || number)
                 && SUFFIXES.iter().any(|suffix| {
                     input[next..].strip_prefix(suffix).is_some_and(|rest| {
-                        (if word {
-                            suffix_context(previous, suffix)
-                        } else {
-                            AFTER_NUMBER.contains(suffix)
-                        }) && rest.chars().next().map_or(true, |c| {
-                            c.is_whitespace()
-                                || matches!(
-                                    c,
-                                    '\u{1800}'
-                                        ..='\u{1809}'
-                                            | '.'
-                                            | ','
-                                            | ';'
-                                            | ':'
-                                            | '!'
-                                            | '?'
-                                            | ')'
-                                            | ']'
-                                            | '}'
-                                            | '"'
-                                            | '\''
-                                )
-                        })
+                        (number || suffix_context(previous, suffix))
+                            && rest.chars().next().map_or(true, |c| {
+                                c.is_whitespace()
+                                    || matches!(
+                                        c,
+                                        '\u{1800}'
+                                            ..='\u{1809}'
+                                                | '.'
+                                                | ','
+                                                | ';'
+                                                | ':'
+                                                | '!'
+                                                | '?'
+                                                | ')'
+                                                | ']'
+                                                | '}'
+                                                | '"'
+                                                | '\''
+                                    )
+                            })
                     })
                 });
             if suffix {
