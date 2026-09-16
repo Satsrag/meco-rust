@@ -35,6 +35,55 @@ printf '%s' 'text' | meco translate --from z52 --to menk_shape
 Run `meco --help` for the canonical encoding names and `meco --version` to verify the installed
 release.
 
+## Optional suffix separator repair
+
+For MenkLetter or Delehi input with lost suffix separators, enable input repair before conversion:
+
+```rust
+use meco_core::{translate_with_options, CodeType, TranslationOptions};
+
+let result = translate_with_options(
+    CodeType::MenkLetter,
+    CodeType::MenkLetter,
+    "ᠤᠯᠤᠰ ᠤᠨ",
+    &TranslationOptions { repair_suffix_separators: true },
+).unwrap();
+assert_eq!(result.text, "ᠤᠯᠤᠰ\u{202F}ᠤᠨ");
+assert_eq!(result.warnings.len(), 1);
+```
+
+With the CLI built from this checkout, place the option after the target encoding:
+
+```sh
+meco translate --from menk_letter --to menk_shape --repair-suffix-separators 'ᠤᠯᠤᠰ ᠤᠨ'
+```
+
+The option also works with stdin. Repairs are listed on stderr; stdout contains only converted
+text. Use `--` before a literal text argument that matches the option name.
+
+Repair is **off by default**. It replaces a single space (U+0020) or NBSP (U+00A0) between a
+Mongolian word and one of these exact suffix spellings with NNBSP (U+202F):
+
+`ᠶᠢᠨ`, `ᠤᠨ`, `ᠦᠨ`, `ᠤ`, `ᠦ`, `ᠶᠢ`, `ᠢ`, `ᠳᠤ`, `ᠳᠦ`, `ᠲᠤ`, `ᠲᠦ`,
+`ᠳᠤᠷ`, `ᠳᠦᠷ`, `ᠲᠤᠷ`, `ᠲᠦᠷ`, `ᠠᠴᠠ`, `ᠡᠴᠡ`, `ᠢᠶᠠᠷ`, `ᠢᠶᠡᠷ`.
+
+This is an explicit spelling heuristic, not grammatical validation: it cannot tell whether a
+suffix-like token was intended as a separate word or a quoted letter. Common ambiguous forms
+such as `ᠪᠠᠷ` (bar) and `ᠲᠠᠢ` (tai) are excluded. Concatenated words, FVS-bearing suffix
+spellings, existing NNBSP/MVS, tabs, newlines and runs of multiple spaces are left alone.
+The suffix inventory is based on the separated suffix examples in
+[L2/19-130](https://unicode.org/L2/L2019/19130-mwg3-8-mong-spec-r.pdf);
+the bar ambiguity is described in
+[L2/18-293](https://www.unicode.org/L2/L2018/18293-nnbsp-solution.pdf).
+
+Each change returns `Warning::RepairedSuffixSeparator` with the **original input UTF-8 byte
+offset** and replaced character, followed by any conversion warnings. Repair runs even for
+same-encoding conversions. Any supported target can be used; the usual conversion rules then
+represent the repaired boundary in that target. Enabling repair for other source encodings
+returns `MecoError::UnsupportedInputRepair`, since their suffix spellings require different rules.
+The existing `translate` and `translate_with_warnings` APIs keep their behavior. This option is
+currently exposed in Rust and the CLI; the existing platform bindings still use the default API.
+
 ## UTN #57 output
 
 Canonical UTN #57 Unicode output is part of the default build and uses the same API:

@@ -207,3 +207,29 @@ fn converts_the_written_unit_spelling_in_both_directions() {
     let help = meco().arg("--help").output().expect("meco command should run");
     assert!(String::from_utf8_lossy(&help.stdout).contains("utn57_shape"));
 }
+
+#[test]
+fn suffix_repair_is_explicit_and_reports_edits_on_stderr() {
+    let out = meco()
+        .args(["translate", "--from", "menk_letter", "--to", "menk_letter", "--repair-suffix-separators", "ᠤᠯᠤᠰ ᠤᠨ"])
+        .output().unwrap();
+    assert!(out.status.success());
+    assert_eq!(out.stdout, "ᠤᠯᠤᠰ\u{202F}ᠤᠨ".as_bytes());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("input byte 12: U+0020 -> U+202F"));
+}
+
+#[test]
+fn suffix_repair_reads_stdin_and_literal_option_can_be_escaped() {
+    let mut child = meco()
+        .args(["translate", "--from", "delehi", "--to", "delehi", "--repair-suffix-separators"])
+        .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
+    child.stdin.take().unwrap().write_all("ᠤᠯᠤᠰ ᠤᠨ".as_bytes()).unwrap();
+    let out = child.wait_with_output().unwrap();
+    assert!(out.status.success());
+    assert_eq!(out.stdout, "ᠤᠯᠤᠰ\u{202F}ᠤᠨ".as_bytes());
+
+    let out = meco().args(["translate", "--from", "delehi", "--to", "delehi", "--", "--repair-suffix-separators"]).output().unwrap();
+    assert!(out.status.success());
+    assert_eq!(out.stdout, b"--repair-suffix-separators");
+    assert!(out.stderr.is_empty());
+}

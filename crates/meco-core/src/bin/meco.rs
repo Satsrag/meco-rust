@@ -1,9 +1,9 @@
-use meco_core::{translate_with_warnings, version, CodeType, Warning};
+use meco_core::{translate_with_options, version, CodeType, TranslationOptions, Warning};
 use std::io::{self, Read, Write};
 use std::process::ExitCode;
 
 fn usage(program: &str) -> String {
-    format!("usage: {program} translate --from <encoding> --to <encoding> [text]")
+    format!("usage: {program} translate --from <encoding> --to <encoding> [--repair-suffix-separators] [text]")
 }
 
 fn help(program: &str) -> String {
@@ -11,6 +11,7 @@ fn help(program: &str) -> String {
         "Mongolian encoding converter\n\n\
 Usage:\n  {program} translate --from <encoding> --to <encoding> [text]\n\n\
 When [text] is omitted, meco reads UTF-8 text from stdin. Converted UTF-8 text is written to stdout without adding a newline.\n\n\
+Options (after --to <encoding>, before text):\n  --repair-suffix-separators  Heuristically restore NNBSP before known suffixes in menk_letter/delehi input; report edits on stderr.\n  --  Treat the following argument as text even if it matches an option.\n\n\
 Encodings:\n  zvvnmod\n  delehi\n  menk_shape\n  menk_letter\n  oyun\n  utn57\n  utn57_shape\n  z52\n\n\
 oyun is not supported.\n"
     )
@@ -53,7 +54,16 @@ fn run(arguments: impl IntoIterator<Item = String>) -> Result<Output, String> {
         return Err(usage(&program));
     }
     let to = arguments.next().ok_or_else(|| usage(&program))?;
-    let input = match arguments.next() {
+    let mut options = TranslationOptions::default();
+    let mut next = arguments.next();
+    if next.as_deref() == Some("--repair-suffix-separators") {
+        options.repair_suffix_separators = true;
+        next = arguments.next();
+    }
+    if next.as_deref() == Some("--") {
+        next = Some(arguments.next().ok_or_else(|| usage(&program))?);
+    }
+    let input = match next {
         Some(input) => input,
         None => {
             let mut input = String::new();
@@ -72,7 +82,7 @@ fn run(arguments: impl IntoIterator<Item = String>) -> Result<Output, String> {
         .map_err(|error| error.to_string())?;
     let to = to.parse::<CodeType>().map_err(|error| error.to_string())?;
     let translation =
-        translate_with_warnings(from, to, &input).map_err(|error| error.to_string())?;
+        translate_with_options(from, to, &input, &options).map_err(|error| error.to_string())?;
     Ok(Output {
         text: translation.text,
         warnings: translation.warnings,

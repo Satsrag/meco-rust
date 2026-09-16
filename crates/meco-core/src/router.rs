@@ -18,8 +18,7 @@ use crate::unicode::zvvnmod::is_zvvnmod_code;
 use crate::utn57_shape;
 use std::fmt;
 
-/// Something a conversion did beyond what its input said. It never changes the result: the text
-/// is still right, and this says how it had to be reached.
+/// Something a conversion did beyond what its input said, including optional heuristic repairs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Warning {
@@ -32,12 +31,20 @@ pub enum Warning {
     /// `E096` (Satsrag/meco-rust#32). The reason is the encoder's own message and names the run's
     /// codes, so the missing glyph can be read off it.
     Utn57(String),
+    /// An opt-in heuristic replaced a space before a recognised suffix with NNBSP.
+    /// The offset is a UTF-8 byte offset in the original input, before any repairs or conversion.
+    RepairedSuffixSeparator { byte_offset: usize, original: char },
 }
 
 impl fmt::Display for Warning {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Warning::Utn57(reason) => write!(f, "UTN #57: {reason}"),
+            Warning::RepairedSuffixSeparator { byte_offset, original } => write!(
+                f,
+                "repaired possible suffix separator at input byte {byte_offset}: U+{:04X} -> U+202F",
+                *original as u32
+            ),
         }
     }
 }
@@ -46,10 +53,39 @@ impl fmt::Display for Warning {
 /// said. See [`translate_with_warnings`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Translation {
-    /// The converted text — exactly what [`translate`] returns.
+    /// The converted text, after any explicitly enabled input repairs.
     pub text: String,
-    /// Warnings, in input order. Empty for every conversion that stayed within the input.
+    /// Input repairs in source order, followed by conversion warnings.
     pub warnings: Vec<Warning>,
+}
+
+/// Optional processing before conversion. Default settings preserve the input behavior of
+/// [`translate`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TranslationOptions {
+    /// Replace single spaces/NBSP before a small allowlist of detached suffixes with NNBSP.
+    /// Supported for MenkLetter and Delehi sources, including same-encoding conversions.
+    /// This is a heuristic: it neither analyses grammar nor splits concatenated words. Each
+    /// replacement is reported as [`Warning::RepairedSuffixSeparator`].
+    pub repair_suffix_separators: bool,
+}
+
+/// Convert with optional input repair. Repairs run before source decoding, even when `from == to`.
+/// With default options this is identical to [`translate_with_warnings`].
+pub fn translate_with_options(
+    from: CodeType,
+    to: CodeType,
+    input: &str,
+    options: &TranslationOptions,
+) -> Result<Translation, MecoError> {
+    if !options.repair_suffix_separators {
+        return translate_with_warnings(from, to, input);
+    }
+    let (input, mut warnings) = crate::repair::suffix_separators(from, input)?;
+    let mut result = translate_with_warnings(from, to, &input)?;
+    warnings.append(&mut result.warnings);
+    result.warnings = warnings;
+    Ok(result)
 }
 
 impl Translation {
