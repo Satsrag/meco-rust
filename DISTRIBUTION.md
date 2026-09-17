@@ -13,7 +13,6 @@ and the per-language packages sit at the repo root, like `meco_php`/`meco_dart` 
 | **PHP** (server) | `composer require zvvnmod/meco` | `meco-cabi` C ABI via FFI |
 | **Browser / web bundler** | Install `meco-wasm-web-*.tgz` from the GitHub Release | `meco-wasm` (wasm-bindgen web target) |
 | **Node.js** | Install `meco-wasm-nodejs-*.tgz` from the GitHub Release | `meco-wasm` (wasm-bindgen nodejs target) |
-| **Agent skill** | Extract `mongolian-convert-*.zip` into the agent's skills directory | Skill source + bundled `meco-wasm` |
 | **iOS** (SwiftPM) | Download `MecoSwift.xcframework.zip` from the GitHub Release | `meco-uniffi` (Swift) |
 | **iOS** (CocoaPods) | `pod 'Meco'` | `meco-uniffi` (Swift) |
 | **Android** (Gradle) | `implementation("com.zvvnmod:meco-android:0.6.0")` | `meco-uniffi` (Kotlin) |
@@ -81,40 +80,6 @@ feature.
 The `wasm` CI job builds separate browser/web and Node.js packages, runs `npm pack` for each, then
 attaches both `.tgz` files to the GitHub Release. It does not call `npm publish`; consumers install the
 matching downloaded tarball directly.
-
-### Agent skill
-
-The `wasm` release job also packages `skills/mongolian-convert/` with the same web
-bindings into `mongolian-convert-<version>.zip` and a `.zip.sha256` checksum file.
-The ZIP contains one `mongolian-convert/` folder with English instructions, UI
-metadata, configuration, the Node.js runner, WASM, dependency licenses, and a
-manifest recording the meco version, source commit, and runtime file hashes.
-Only the maintained skill source is committed; generated converter assets stay
-in the downloadable package. The skill's package version follows `meco-core`.
-
-Consumers need Node.js 18.20 or newer and an agent that can execute commands. They
-extract the folder into their agent's skills directory, then invoke
-`$mongolian-convert`. The meco step runs locally without Rust or npm installation.
-
-To build a package locally, install the `wasm32-unknown-unknown` Rust target and
-the `wasm-bindgen-cli` version matching `wasm-bindgen` in `Cargo.lock`. With
-Python 3.9 or newer and Node.js available, run from the repository root:
-
-```sh
-cargo build -p meco-wasm --target wasm32-unknown-unknown --release --locked
-wasm-bindgen --target web --out-name meco --out-dir target/skill-wasm \
-  target/wasm32-unknown-unknown/release/meco_wasm.wasm
-python3 tools/package-mongolian-convert.py --wasm-dir target/skill-wasm
-```
-
-Alternatively, pass the directory produced by `wasm-pack build --target web
---out-name meco` as `--wasm-dir`. The packager runs conversion and input validation
-checks in a temporary directory before writing `target/skills/`. CI also exercises
-the package on Node.js 18. To check an extracted ZIP separately:
-
-```sh
-node tools/test-mongolian-convert.mjs /path/to/extracted/mongolian-convert
-```
 
 ### iOS → SwiftPM / CocoaPods
 CI builds `MecoSwift.xcframework` and `MecoC.xcframework`. For SwiftPM, point the

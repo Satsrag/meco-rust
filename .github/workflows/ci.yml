@@ -25,15 +25,3 @@ jobs:
       - run: cargo +1.82.0 check -p meco-core --features utn57-command --locked
       # Ensure the web binding (UTN #57 included) still compiles to wasm.
       - run: cargo build -p meco-wasm --target wasm32-unknown-unknown --locked
-      - name: Install matching wasm-bindgen CLI for skill packaging
-        run: |
-          version=$(cargo metadata --format-version 1 --locked \
-            | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')
-          cargo install wasm-bindgen-cli --version "$version" --locked
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with: { node-version: '18' }
-      - name: Package and test the skill on Node.js 18
-        run: |
-          wasm-bindgen --target web --out-name meco --out-dir target/skill-wasm \
-            target/wasm32-unknown-unknown/debug/meco_wasm.wasm
-          python3 tools/package-mongolian-convert.py --wasm-dir target/skill-wasm

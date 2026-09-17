@@ -223,22 +223,12 @@ Download packages from the [v0.6.0 release](https://github.com/Satsrag/meco-rust
 | Android | `meco-android-release.aar` |
 | Browser/WebAssembly | `meco-wasm-web-0.6.0.tgz` |
 | Node.js/WebAssembly | `meco-wasm-nodejs-0.6.0.tgz` |
-| Mongolian conversion agent skill | `mongolian-convert-0.6.0.zip` |
 
 The C archives include the header and static/dynamic libraries for the target. Go, Python, PHP, Java, Dart, and other runtimes can load the C ABI. Swift, Android, browser, and Node.js have dedicated packages.
 
 See [USAGE.md](USAGE.md) for C, C++, Go, Python, Dart, Java, Android, Swift, Objective-C, browser, Node.js, and PHP examples.
 
 Every prebuilt package includes UTN #57 output alongside the portable conversions among ZVVNMOD, Delehi, MenkShape, MenkLetter, and Z52.
-
-### Mongolian conversion skill
-
-Download [mongolian-convert-0.6.0.zip](https://github.com/Satsrag/meco-rust/releases/download/v0.6.0/mongolian-convert-0.6.0.zip)
-and extract the `mongolian-convert/` folder into your agent's skills directory.
-The agent transliterates Cyrillic Mongolian into a MenkLetter draft, then runs the
-bundled meco converter to repair suffix separators and produce UTN57 or another
-requested encoding. Running the skill requires Node.js 18.20 or newer.
-See the [skill source and installation guide](skills/mongolian-convert/README.md).
 
 ## Conversion model
 
@@ -305,7 +295,6 @@ crates/meco-cabi      C ABI
 crates/meco-uniffi    Swift/Kotlin bindings
 crates/meco-wasm      browser and Node.js WebAssembly
 bindings/             platform packaging
-skills/               agent skill source (bundled converters are built for releases)
 .github/workflows/    CI and release automation
 ```
 
