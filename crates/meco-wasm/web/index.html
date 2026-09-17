@@ -153,6 +153,11 @@
     footer { margin-top:14px; font-size:12px; color:var(--mut); }
     footer a { color:var(--acc); text-decoration:none; }
     footer a:hover { text-decoration:underline; }
+    .opts { margin:0 0 8px; font-size:13px; color:var(--mut); }
+    .opts label { cursor:pointer; }
+    .opts input { vertical-align:-2px; margin-right:6px; }
+    .opts .note { margin-left:8px; }
+    .opts .count { margin-left:8px; color:var(--acc); }
 </style>
 </head>
 <body>
@@ -162,6 +167,12 @@
         <span id="alertMsg"></span>
         <button type="button" id="alertReport">Report / 报个问题</button>
         <button type="button" id="alertClose" aria-label="dismiss / 关闭" hidden>×</button>
+    </div>
+
+    <div class="opts">
+        <label for="repair"><input type="checkbox" id="repair" checked>Repair suffix separators / 矫正后缀分隔符</label>
+        <span class="note">menk letter / delehi input only: a space before a known suffix becomes NNBSP so it shapes as a suffix / 仅对 menk letter、delehi 输入生效：已知后缀前的空格改为 NNBSP，使其按后缀显示</span>
+        <span class="count" id="repairCount"></span>
     </div>
 
     <div class="panes">
@@ -218,12 +229,16 @@
     </dialog>
 
 <script type="module">
-import init, { translate, translate_with_warnings, version } from "./pkg/meco_wasm.js";
+import init, { translate, translate_with_warnings, translate_with_options, version } from "./pkg/meco_wasm.js";
 
 const SIDE_TYPES = ["z52", "menk_shape", "menk_letter", "delehi", "utn57", "utn57_shape"]; // oyun still deferred
 // Every one of these reads and writes; the left/right split is a layout choice about where you
 // type, not a limit on what meco can decode.
 const SOURCE_TYPES = SIDE_TYPES;
+// The encodings whose input meco can repair (a space before a known suffix → NNBSP). The checkbox
+// is ignored, not an error, for the others.
+const REPAIRABLE = ["menk_letter", "delehi"];
+const repairOn = enc => $("repair").checked && REPAIRABLE.includes(enc);
 const TARGET_TYPES = ["utn57", ...SIDE_TYPES.filter(t=>t!=="utn57")]; // utn57 leads the output side
 
 // The national standard each Unicode-side encoding follows. z52 and menk_shape are vendor shape
@@ -296,7 +311,7 @@ const LS_KEY = "meco-wasm-demo/v1";
 function saveState(){
     try{
         localStorage.setItem(LS_KEY, JSON.stringify({
-            encL:$("encL").value, encR:$("encR").value,
+            encL:$("encL").value, encR:$("encR").value, repair:$("repair").checked,
             L:$("boxL").value, M:$("boxM").value, R:$("boxR").value,
         }));
     }catch(e){ /* storage unavailable — carry on without memory */ }
@@ -434,7 +449,8 @@ const SEPS = /[  \t\r]+/g;
 let budget = 0; // characters this alignment may still convert; word cuts stop when it runs out
 function conv(from, to, s){
     budget -= s.length;
-    try{ return translate(from, to, s); }catch(e){ return null; }
+    try{ return repairOn(from) ? translate_with_options(from, to, s, true).text : translate(from, to, s); }
+    catch(e){ return null; }
 }
 
 // Verified cut pairs [p, q] between `a` and `b`, where `b` is `a` converted from → to, ascending
@@ -557,12 +573,27 @@ function applyFonts(){
 // has no glyph for that position — lands in `warns[slot]`, one message per affected run.
 const errs = {};
 const warns = {};
-function tr(from,to,s,slot){
+// Separator repairs made on the way in (one message per edit). They are expected work, not a
+// warning, so they are counted next to the checkbox rather than raised in the alert bar.
+let repairs = [];
+let lastSrc = "L"; // the box last converted from; the checkbox re-runs that conversion
+function tr(from,to,s,slot,repair){
     errs[slot] = null;
     warns[slot] = [];
     if(s==="") return "";
-    try{ const r = translate_with_warnings(from,to,s); warns[slot] = r.warnings; return r.text; }
+    try{
+        const r = repair ? translate_with_options(from,to,s,true) : translate_with_warnings(from,to,s);
+        warns[slot] = r.warnings;
+        if(repair) repairs = r.repairs;
+        return r.text;
+    }
     catch(e){ errs[slot] = (e && e.message) || String(e); return null; }
+}
+function showRepairs(srcEnc){
+    const el = $("repairCount");
+    if(!$("repair").checked) el.textContent = "";
+    else if(!REPAIRABLE.includes(srcEnc)) el.textContent = `not applied to ${srcEnc} input / 对 ${srcEnc} 输入不生效`;
+    else el.textContent = repairs.length ? `${repairs.length} repaired / 已矫正 ${repairs.length} 处` : "nothing to repair / 无需矫正";
 }
 
 // Rerun the conversion for one side, in whichever direction that side can go. Changing a selector
@@ -586,8 +617,11 @@ function recompute(src){
     warns.L = warns.M = warns.R = [];
     const val = $("box"+src).value;
     const srcEnc = encOf(src);
+    lastSrc = src;
+    repairs = [];
     // to hub
-    let zv = src==="M" ? val : tr(srcEnc,"zvvnmod",val,src);
+    let zv = src==="M" ? val : tr(srcEnc,"zvvnmod",val,src,repairOn(srcEnc));
+    showRepairs(srcEnc);
     const fail = (x,msg)=>{ $("hex"+x).innerHTML = `<span class="err">${msg}</span>`; };
     if(zv===null){ // source failed to decode
         ["L","M","R"].filter(x=>x!==src).forEach(x=>{ $("box"+x).value=""; paintPane(x); fail(x,"conversion failed / 转换错误"); });
@@ -635,6 +669,7 @@ function diagnostics(){
         "screenshot": "",   // filled in by pasting; the URL cannot carry an image
         "environment": [
             `core: ${CORE} (wasm)`,
+            `repair: ${$("repair").checked ? "on" : "off"}${repairs.length ? " (" + repairs.length + " edits)" : ""}`,
             `page: ${location.href}`,
             `fonts: ${[...document.fonts].map(f=>f.family+"="+f.status).join(" ")}`,
             `ua: ${navigator.userAgent}`,
@@ -776,6 +811,7 @@ function wire(){
     const pick = (v,def) => TARGET_TYPES.includes(v) ? v : def;
     fillSel($("encL"), SOURCE_TYPES.includes(st && st.encL) ? st.encL : "z52", SOURCE_TYPES);
     fillSel($("encR"), pick(st && st.encR, "menk_shape"), TARGET_TYPES);
+    if(st && typeof st.repair === "boolean") $("repair").checked = st.repair; // default: on
     applyFonts();
     if(st){ // restore text verbatim: re-running the conversion could rewrite what you left here
         ["L","M","R"].forEach(x=>{ $("box"+x).value = st[x] || ""; });
@@ -857,6 +893,7 @@ function wire(){
     ["L","M","R"].forEach(x=>$("hex"+x).addEventListener("mouseup", syncSel));
     $("encL").onchange = ()=>{ applySide("L"); reconvert("L"); };
     $("encR").onchange = ()=>{ applySide("R"); reconvert("R"); };
+    $("repair").onchange = ()=>{ alignKey = null; recompute(lastSrc); };
 }
 
 init().then(()=>{

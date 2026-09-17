@@ -2,7 +2,7 @@
 //! Node, Deno/Bun and edge runtimes (Cloudflare Workers, etc.). Strings marshal automatically.
 //! `meco-core` stays `#![forbid(unsafe_code)]`; wasm-bindgen's glue is confined to this crate.
 
-use meco_core::CodeType;
+use meco_core::{CodeType, TranslationOptions, Warning};
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
@@ -18,11 +18,26 @@ pub fn translate(from: &str, to: &str, input: &str) -> Result<String, JsError> {
 
 /// A finished conversion: `text` is what `translate` returns, `warnings` says what the conversion
 /// had to do beyond what the input said (empty for most conversions). Today only the `utn57`
-/// target raises any, for a hub run it could spell only with an invented ZWJ.
+/// target raises any, for a hub run it could spell only with an invented ZWJ. `repairs` lists
+/// the suffix separators that `translate_with_options` restored, one entry per edit; it is empty
+/// unless repair was requested.
 #[wasm_bindgen(getter_with_clone)]
 pub struct Translation {
     pub text: String,
     pub warnings: Vec<String>,
+    pub repairs: Vec<String>,
+}
+
+fn finish(translation: meco_core::Translation) -> Translation {
+    let (repairs, warnings): (Vec<_>, Vec<_>) = translation
+        .warnings
+        .iter()
+        .partition(|w| matches!(w, Warning::RepairedSuffixSeparator { .. }));
+    Translation {
+        text: translation.text,
+        warnings: warnings.iter().map(|w| w.to_string()).collect(),
+        repairs: repairs.iter().map(|w| w.to_string()).collect(),
+    }
 }
 
 /// Like `translate`, and also reports the conversion's warnings. Throws on the same errors.
@@ -32,14 +47,27 @@ pub fn translate_with_warnings(from: &str, to: &str, input: &str) -> Result<Tran
     let to = CodeType::from_str(to).map_err(|e| JsError::new(&e.to_string()))?;
     let translation = meco_core::translate_with_warnings(from, to, input)
         .map_err(|e| JsError::new(&e.to_string()))?;
-    Ok(Translation {
-        text: translation.text,
-        warnings: translation
-            .warnings
-            .iter()
-            .map(|warning| warning.to_string())
-            .collect(),
-    })
+    Ok(finish(translation))
+}
+
+/// Like `translate_with_warnings`, with `repair_suffix_separators` set, also restores NNBSP before
+/// known suffixes in `menk_letter` / `delehi` input first (a space that lost its NNBSP would
+/// otherwise shape as an independent word). Throws if repair is requested for any other source.
+#[wasm_bindgen]
+pub fn translate_with_options(
+    from: &str,
+    to: &str,
+    input: &str,
+    repair_suffix_separators: bool,
+) -> Result<Translation, JsError> {
+    let from = CodeType::from_str(from).map_err(|e| JsError::new(&e.to_string()))?;
+    let to = CodeType::from_str(to).map_err(|e| JsError::new(&e.to_string()))?;
+    let options = TranslationOptions {
+        repair_suffix_separators,
+    };
+    let translation = meco_core::translate_with_options(from, to, input, &options)
+        .map_err(|e| JsError::new(&e.to_string()))?;
+    Ok(finish(translation))
 }
 
 /// Library version.

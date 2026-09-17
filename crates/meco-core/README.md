@@ -112,7 +112,8 @@ same-encoding conversions. Any supported target can be used; the usual conversio
 represent the repaired boundary in that target. Enabling repair for other source encodings
 returns `MecoError::UnsupportedInputRepair`, since their suffix spellings require different rules.
 The existing `translate` and `translate_with_warnings` APIs keep their behavior. This option is
-currently exposed in Rust and the CLI; the existing platform bindings still use the default API.
+exposed in Rust, the CLI and the WebAssembly binding (`translate_with_options`, on by default in
+the web demo); the other platform bindings still use the default API.
 
 ## UTN #57 output
 
