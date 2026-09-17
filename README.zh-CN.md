@@ -216,12 +216,21 @@ let output = translate(CodeType::MenkLetter, CodeType::Utn57, input)?;
 | Android | `meco-android-release.aar` |
 | 浏览器/WebAssembly | `meco-wasm-web-0.6.0.tgz` |
 | Node.js/WebAssembly | `meco-wasm-nodejs-0.6.0.tgz` |
+| 蒙古文转换 agent skill | `mongolian-convert-0.6.0.zip` |
 
 C 压缩包包含对应平台的 header、静态库和动态库。Go、Python、PHP、Java、Dart 等运行时可以加载 C ABI。Swift、Android、浏览器和 Node.js 使用各自的专用包。
 
 C、C++、Go、Python、Dart、Java、Android、Swift、Objective-C、浏览器、Node.js 和 PHP 的示例见 [USAGE.md](USAGE.md)。
 
 所有预编译包都包含 UTN #57 输出，以及 ZVVNMOD、Delehi、MenkShape、MenkLetter 和 Z52 之间的普通转换。
+
+### 蒙古文转换 skill
+
+下载 [mongolian-convert-0.6.0.zip](https://github.com/Satsrag/meco-rust/releases/download/v0.6.0/mongolian-convert-0.6.0.zip)，
+将其中的 `mongolian-convert/` 文件夹解压到 agent 的 skills 目录。
+模型先将西里尔蒙古文转写为 MenkLetter 草稿，再实际运行包内的 meco 修复后缀分隔符，
+默认输出 UTN57，也可指定其他编码。运行需要 Node.js 18.20 或更新版本。
+源码及英文安装说明见 [skills/mongolian-convert](skills/mongolian-convert/README.md)。
 
 ## 转换模型
 
@@ -288,6 +297,7 @@ crates/meco-cabi      C ABI
 crates/meco-uniffi    Swift/Kotlin bindings
 crates/meco-wasm      浏览器和 Node.js WebAssembly
 bindings/             各平台打包配置
+skills/               agent skill 源码（发布时打包转换器）
 .github/workflows/    CI 和发布自动化
 ```
 
