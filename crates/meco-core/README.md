@@ -64,7 +64,9 @@ text. Use `--` before a literal text argument that matches the option name.
 Repair is **off by default**. It replaces a single space (U+0020) or NBSP (U+00A0) before one
 of the exact suffix spellings below with NNBSP (U+202F). A lost separator matters because a
 suffix after NNBSP is shaped as a particle, but the same letters after a space are shaped as an
-independent word. The preceding token must be a Mongolian word or a number.
+independent word. The space must follow a token that can take a suffix: a Mongolian word, a
+number, a word in another script (`APP ᠪᠡᠷ`), a closing bracket or quote (`︾ ᠶᠢᠨ`) or a unit
+symbol (`60° ᠡᠴᠡ`), but not sentence punctuation, an opening bracket or another space.
 
 The suffix spellings are the original 19 case suffixes
 
@@ -76,11 +78,11 @@ yuγan/yügen, ačaγan/ečegen, duni/düni, tuni/tüni, dahi/dehi, taki/teki, b
 tai/tei, nar/ner and the ordinals duγar/düger.
 
 No vowel-harmony check is made: after NNBSP a suffix renders the same whatever precedes it, and
-the written spelling is kept. Three rules decline stems after which the same letters are usually
-an independent word:
+the written spelling is kept. After a Mongolian word, three rules decline stems after which the same
+letters are usually an independent word (after other tokens the spelling is taken as written):
 
-- Ordinals are repaired only after a number (`3 ᠳᠤᠭᠠᠷ`), since dugar is also a word. A number
-  (`25 ᠤ`, `᠒᠐ ᠶᠢᠨ`) accepts every other suffix as well.
+- Ordinals are not repaired after a Mongolian word, since dugar is also a word; after a number
+  (`3 ᠳᠤᠭᠠᠷ`) or any other token they are.
 - T-initial suffixes other than tai/tei need a stem ending in a consonant that selects them,
   such as ᠷ, ᠭ, ᠰ or ᠳ; after a vowel, `ᠲᠦᠷ` is the word tür.
 - Bar/ber and ban/ben need a stem ending in a vowel or ᠶ, so `ᠴᠠᠭᠠᠨ ᠪᠠᠷ` ("white tiger")
@@ -97,7 +99,8 @@ are excluded. A font's particle table is not a repair allowlist.
 
 This is an explicit spelling heuristic, not grammatical validation: it cannot tell whether a
 suffix-like token was intended as a separate word or a quoted letter. In two 50 MB corpus tests with
-every NNBSP removed, at least 99.77% of repairs restored an original NNBSP. Concatenated words,
+every NNBSP removed, at least 99.65% of repairs restored an original NNBSP, and most of the rest
+were suffixes the writer had spaced after a Latin word. Concatenated words,
 FVS-bearing suffix spellings, existing NNBSP/MVS, tabs, newlines and runs of multiple spaces are
 left alone. The suffix inventory is based on the separated suffix examples in
 [L2/19-130](https://unicode.org/L2/L2019/19130-mwg3-8-mong-spec-r.pdf) and

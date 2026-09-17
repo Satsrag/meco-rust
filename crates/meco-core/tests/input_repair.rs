@@ -164,7 +164,6 @@ fn comitative_and_plural_repair_respects_boundaries() {
                 format!("{stem}{suffix}"),
                 format!("{stem}  {suffix}"),
                 format!("{stem}\n{suffix}"),
-                format!("Latin {suffix}"),
             ] {
                 let result = translate_with_options(from, from, &raw, &REPAIR).unwrap();
                 assert_eq!(result.text, raw);
@@ -410,6 +409,45 @@ fn t_initial_suffixes_follow_the_consonants_that_select_them() {
 }
 
 #[test]
+fn any_word_bracket_or_symbol_can_take_a_suffix() {
+    // Corpus: APP ᠪᠡᠷ, DEX ᠲᠠᠢ, ︾ ᠶᠢᠨ, 60° ᠡᠴᠡ, 600℃ ᠲᠦ. No stem rule applies, since the
+    // writer's spelling after such a token is the only evidence.
+    let cases = [
+        ("APP", "ᠪᠡᠷ"),
+        ("DEX", "ᠲᠠᠢ"),
+        ("iPhone", "ᠶᠢ"),
+        ("MP3", "ᠪᠡᠷ"),
+        ("ᠨᠣᠮ3", "ᠤ"),
+        ("x3", "ᠤ"),
+        ("A", "ᠳᠤᠭᠠᠷ"),
+        ("中文", "ᠤᠨ"),
+        ("︽ᠨᠣᠮ︾", "ᠶᠢᠨ"),
+        ("（ᠨᠣᠮ）", "ᠲᠦᠷ"),
+        ("\"ᠨᠣᠮ\"", "ᠢ"),
+        ("60°", "ᠡᠴᠡ"),
+        ("600℃", "ᠲᠦ"),
+        ("99％", "ᠡᠴᠡ"),
+    ];
+    for from in [CodeType::MenkLetter, CodeType::Delehi] {
+        for (before, suffix) in cases {
+            assert_single_repair(from, before, suffix);
+        }
+        for raw in [
+            "ᠨᠣᠮ᠂ ᠢ", // sentence punctuation
+            "ᠨᠣᠮ᠃ ᠲᠦᠷ",
+            "ᠨᠣᠮ, ᠤᠨ",
+            "ᠨᠣᠮ ︽ ᠤᠨ", // opening bracket
+            "ᠨᠣᠮ ( ᠤᠨ",
+            " ᠤᠨ", // line start
+            "ᠨᠣᠮ\t ᠤᠨ",
+            "\u{200D} ᠤᠨ", // a control alone is not a token
+        ] {
+            assert_unchanged(from, raw);
+        }
+    }
+}
+
+#[test]
 fn number_context_repairs_case_suffixes_and_ordinals() {
     let cases = [
         ("25", "ᠤ"),
@@ -443,9 +481,6 @@ fn number_context_repairs_case_suffixes_and_ordinals() {
             "3  ᠤ",
             "3\nᠤ",
             "3\u{202F}ᠤ",
-            "MP3 ᠪᠡᠷ",
-            "ᠨᠣᠮ3 ᠤ",
-            "x3 ᠤ",
             "ᠡᠨᠡ ᠳᠤᠭᠠᠷ",
             "ᠨᠢᠭᠡ ᠳᠦᠭᠡᠷ", // numeral words take attached ordinals
             "ᠭᠤᠷᠪᠠᠨ ᠳᠤᠭᠠᠷ",
@@ -530,7 +565,6 @@ fn preserves_layout_existing_controls_and_unrecognised_words() {
         "  \n",
         "ᠤᠨ",
         " ᠤᠨ",
-        "Latin ᠤᠨ",
         "ᠤᠯᠤᠰ\nᠤᠨ",
         "ᠤᠯᠤᠰ\tᠤᠨ",
         "ᠤᠯᠤᠰ  ᠤᠨ",
@@ -543,8 +577,6 @@ fn preserves_layout_existing_controls_and_unrecognised_words() {
         "ᠤᠯᠤᠰ\u{180E}ᠤᠨ",
         "ᠤᠯᠤᠰ\u{202F}\u{202F}ᠤᠨ",
         "ᠴᠠᠭᠠᠨ ᠪᠠᠷ",
-        "Latin ᠲᠠᠢ",
-        "MP3 ᠪᠡᠷ",
         "ᠤᠯᠤᠰ ᠤᠨLatin",
         "ᠤᠯᠤᠰ ᠤᠨ_abc",
         "ᠤᠯᠤᠰ, ᠤᠨ",

@@ -92,15 +92,33 @@ stems and suffixes freely (`ᠮᠣᠷᠢ ᠪᠡᠷ`, `ᠬᠡᠨ ᠲᠠᠢ`).
 matching harmony and had stricter stem checks. On slice A below, those checks blocked about
 5,800 correct repairs to avoid about 80 wrong ones.
 
-The preceding token must be a Mongolian word or a standalone number. Letters are matched
-exactly, and variation selectors, ZWJ/ZWNJ and MVS in the stem are allowed. Only three rules
-look at the stem, and each exists because the same letters after that kind of stem are usually
-an independent word:
+The space must follow a token that can take a suffix: a Mongolian word, a number, a word in
+another script (`APP ᠪᠡᠷ`), a closing bracket or quote around a title (`︾ ᠶᠢᠨ`), or a
+unit symbol (`60° ᠡᠴᠡ`). Sentence punctuation, opening brackets, another space, a line start
+or a lone control character cannot precede a suffix. The counts below are for 50 MB of intact
+CMLI text, by the character before the separator, over all 54 spellings:
 
-1. **Ordinals** (duγar/düger) are repaired only after a **number**: ASCII or Mongolian digits,
-   optionally with a decimal point, and not attached to letters as in `MP3`. After a numeral
-   word the ordinal is attached, and after other words dugar is an independent token.
-   A number accepts every other spelling too, with no further check.
+| Before the separator | NNBSP | Ordinary space | Space share |
+|---|---:|---:|---:|
+| Mongolian letter | 1,734,507 | 3,239 | 0.2% |
+| Closing bracket or quote | 14,458 | 287 | 1.9% |
+| Digit | 7,527 | 337 | 4.3% |
+| Symbol (%, °, ℃) | 454 | 20 | 4.2% |
+| Latin letter | 2,968 | 1,141 | 27.8% |
+| Sentence punctuation (᠂ ᠃ etc.) | 1,147 | 1,685 | 59.5% |
+
+A random sample of 20 of the Latin-letter spaces (`USB ᠲᠠᠢ`, `Google Adsense ᠪᠡᠷ`,
+`HelloWorld ᠡᠴᠡ`) contained only genuine suffixes with a lost separator, so the 27.8% is a
+measure of how often writers lose the separator after Latin, not of independent words.
+
+Letters are matched exactly, and variation selectors, ZWJ/ZWNJ and MVS in the stem are allowed.
+After a Mongolian word only, three rules look at the stem. Each exists because the same letters
+after that kind of stem are usually an independent word; after any other token the writer's
+spelling is the only evidence and is accepted as it is:
+
+1. **Ordinals** (duγar/düger) are not repaired after a Mongolian word. After a numeral word
+   the ordinal is attached, and after other words dugar is an independent token. After a
+   number (`3 ᠳᠤᠭᠠᠷ`) or any other token they are repaired.
 2. **T-initial suffixes** except tai/tei, **including the original tu/tü/tur/tür**, require
    the stem's last letter to be one of the consonants that select a T form:
    ᠪ ᠭ ᠬ ᠷ ᠰ ᠱ ᠳ ᠲ ᠴ ᠺ ᠫ ᠹ ᠽ ᠼ ᠾ. After a vowel or n, `ᠲᠦᠷ` is the independent word tür
@@ -199,11 +217,17 @@ Many "false" repairs after numbers are genuine suffixes the writer spaced (`7 �
 | Slice | Version | Repairs | Precision | Recall of all NNBSP |
 |---|---|---:|---:|---:|
 | A | before this revision | 605,141 | 99.766% | 80.6% |
-| A | this revision | 648,714 | 99.774% | 86.4% |
+| A | this revision | 656,637 | 99.649% | 87.4% |
+| A | Mongolian words and numbers only | 648,714 | 99.774% | 86.4% |
 | A | no stem rules at all | 649,036 | 99.729% | 86.4% |
 | B | before this revision | 603,992 | 99.783% | 81.0% |
-| B | this revision | 647,593 | 99.792% | 86.9% |
+| B | this revision | 655,126 | 99.678% | 87.8% |
+| B | Mongolian words and numbers only | 647,593 | 99.792% | 86.9% |
 | B | no stem rules at all | 647,901 | 99.746% | 86.9% |
+
+Accepting suffixes after Latin words, brackets and symbols lowers the measured precision
+because the writers' own spaces there count as "false" repairs. The sample above shows they
+are lost separators, so the true precision is higher than the table's.
 
 The largest remaining gaps are GB spellings this repair does not accept as Menk/Delehi input
 (`ᠲᠠᠶ`/`ᠲᠡᠶ`, FVS-marked `ᠳ᠋ᠤ`). The largest remaining false-repair groups predate this revision:

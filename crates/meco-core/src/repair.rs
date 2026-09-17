@@ -66,7 +66,7 @@ const SUFFIXES: &[&str] = &[
     "ᠨᠠᠷ",
     "ᠨᠡᠷ", // plural
     "ᠳᠤᠭᠠᠷ",
-    "ᠳᠦᠭᠡᠷ", // ordinal, after numbers only
+    "ᠳᠦᠭᠡᠷ", // ordinal, not after Mongolian words
 ];
 
 fn letter(c: char) -> bool {
@@ -84,19 +84,53 @@ fn mongolian_word(s: &str) -> bool {
 // Final consonants that select the T-initial allomorph (tu, tur, taki, tegen, ...).
 const T_SELECTING: &str = "ᠪᠭᠬᠷᠰᠱᠳᠲᠴᠺᠫᠹᠽᠼᠾ";
 
-fn digit(c: char) -> bool {
-    matches!(c, '0'..='9' | '\u{1810}'..='\u{1819}')
-}
-
-// A standalone number such as 25, 3.5 or ᠒᠐ ends immediately before the space. Digits glued
-// to letters (MP3, a Mongolian word) are not a number context.
-fn ends_with_number(before: &str) -> bool {
-    let run = before.len() - before.trim_end_matches(digit).len();
-    run > 0
-        && before[..before.len() - run]
-            .chars()
-            .next_back()
-            .map_or(true, |c| !c.is_alphanumeric() && !word_char(c))
+// Any other token can take a suffix: a number, a Latin or Chinese word, a closing bracket or
+// quote around a title (︾ ᠶᠢᠨ), or a unit symbol (60° ᠡᠴᠡ). Sentence punctuation, opening
+// brackets, other spaces, line starts and controls cannot.
+fn token_end(c: char) -> bool {
+    c.is_alphanumeric()
+        || matches!(
+            c,
+            ')' | ']'
+                | '}'
+                | '"'
+                | '\''
+                | '\u{2019}'
+                | '\u{201D}'
+                | '\u{00BB}'
+                | '\u{203A}'
+                | '\u{300B}'
+                | '\u{300D}'
+                | '\u{300F}'
+                | '\u{3009}'
+                | '\u{3011}'
+                | '\u{3015}'
+                | '\u{FF09}'
+                | '\u{FF3D}'
+                | '\u{FF5D}'
+                | '\u{FE36}'
+                | '\u{FE38}'
+                | '\u{FE3A}'
+                | '\u{FE3C}'
+                | '\u{FE3E}'
+                | '\u{FE40}'
+                | '\u{FE42}'
+                | '\u{FE44}'
+                | '%'
+                | '\u{FF05}'
+                | '\u{2030}'
+                | '\u{00B0}'
+                | '\u{2103}'
+                | '\u{2109}'
+                | '+'
+                | '$'
+                | '\u{00A5}'
+                | '\u{20AC}'
+                | '\u{00A3}'
+                | '\u{FFE5}'
+                | '#'
+                | '\u{2116}'
+        )
 }
 
 // Rendering after NNBSP depends only on the suffix, so no vowel-harmony check is made. These
@@ -104,7 +138,8 @@ fn ends_with_number(before: &str) -> bool {
 fn suffix_context(previous: &str, suffix: &str) -> bool {
     let last = previous.chars().rev().find(|&c| letter(c));
     match suffix {
-        // Ordinals are repaired after numbers only: dugar is also an independent word.
+        // After a Mongolian word, dugar is an independent word (ordinals attach to numeral
+        // words). After a number or any other token it is the ordinal.
         "ᠳᠤᠭᠠᠷ" | "ᠳᠦᠭᠡᠷ" => false,
         "ᠲᠠᠢ" | "ᠲᠡᠢ" => true,
         // After a vowel or n, ᠲᠦᠷ is the independent word tür.
@@ -138,13 +173,14 @@ pub(crate) fn suffix_separators(
             let next = offset + c.len_utf8();
             let previous = &input[word_start..offset];
             let word = mongolian_word(previous);
-            let number = previous.is_empty() && ends_with_number(&input[..offset]);
+            let other_token =
+                previous.is_empty() && input[..offset].chars().next_back().is_some_and(token_end);
             // Bound the lookahead to the short suffix inventory. This also avoids copying or
             // rescanning arbitrary following words in a large document.
-            let suffix = (word || number)
+            let suffix = (word || other_token)
                 && SUFFIXES.iter().any(|suffix| {
                     input[next..].strip_prefix(suffix).is_some_and(|rest| {
-                        (number || suffix_context(previous, suffix))
+                        (!word || suffix_context(previous, suffix))
                             && rest.chars().next().map_or(true, |c| {
                                 c.is_whitespace()
                                     || matches!(
