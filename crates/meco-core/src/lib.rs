@@ -25,6 +25,7 @@ mod code_type;
 mod dispatch;
 mod error;
 mod letter;
+mod repair;
 mod router;
 mod shape;
 mod strings;
@@ -35,7 +36,10 @@ mod word;
 
 pub use code_type::{CodeSeries, CodeType};
 pub use error::MecoError;
-pub use router::{translate, translate_with_warnings, Translation, Warning};
+pub use router::{
+    translate, translate_with_options, translate_with_warnings, Translation, TranslationOptions,
+    Warning,
+};
 
 /// Crate version (currently just the Cargo package version). A table-provenance tag
 /// (the Java commit the generated tables come from) will be appended once tables exist.

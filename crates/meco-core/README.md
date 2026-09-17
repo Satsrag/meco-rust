@@ -35,6 +35,86 @@ printf '%s' 'text' | meco translate --from z52 --to menk_shape
 Run `meco --help` for the canonical encoding names and `meco --version` to verify the installed
 release.
 
+## Optional suffix separator repair
+
+For MenkLetter or Delehi input with lost suffix separators, enable input repair before conversion:
+
+```rust
+use meco_core::{translate_with_options, CodeType, TranslationOptions};
+
+let result = translate_with_options(
+    CodeType::MenkLetter,
+    CodeType::MenkLetter,
+    "ᠤᠯᠤᠰ ᠤᠨ",
+    &TranslationOptions { repair_suffix_separators: true },
+).unwrap();
+assert_eq!(result.text, "ᠤᠯᠤᠰ\u{202F}ᠤᠨ");
+assert_eq!(result.warnings.len(), 1);
+```
+
+With the CLI built from this checkout, place the option after the target encoding:
+
+```sh
+meco translate --from menk_letter --to menk_shape --repair-suffix-separators 'ᠤᠯᠤᠰ ᠤᠨ'
+```
+
+The option also works with stdin. Repairs are listed on stderr; stdout contains only converted
+text. Use `--` before a literal text argument that matches the option name.
+
+Repair is **off by default**. It replaces a single space (U+0020) or NBSP (U+00A0) before one
+of the exact suffix spellings below with NNBSP (U+202F). A lost separator matters because a
+suffix after NNBSP is shaped as a particle, but the same letters after a space are shaped as an
+independent word. The space must follow a token that can take a suffix: a Mongolian word, a
+number, a word in another script (`APP ᠪᠡᠷ`), a closing bracket or quote (`︾ ᠶᠢᠨ`) or a unit
+symbol (`60° ᠡᠴᠡ`), but not sentence punctuation, an opening bracket or another space.
+
+The suffix spellings are the original 19 case suffixes
+
+`ᠶᠢᠨ`, `ᠤᠨ`, `ᠦᠨ`, `ᠤ`, `ᠦ`, `ᠶᠢ`, `ᠢ`, `ᠳᠤ`, `ᠳᠦ`, `ᠲᠤ`, `ᠲᠦ`,
+`ᠳᠤᠷ`, `ᠳᠦᠷ`, `ᠲᠤᠷ`, `ᠲᠦᠷ`, `ᠠᠴᠠ`, `ᠡᠴᠡ`, `ᠢᠶᠠᠷ`, `ᠢᠶᠡᠷ`,
+
+plus iyan/iyen, luγ-a/lüge, nuγud/nügüd, ud/üd, daγan/degen, taγan/tegen (also `ᠲᠡᠬᠡᠨ`),
+yuγan/yügen, ačaγan/ečegen, duni/düni, tuni/tüni, dahi/dehi, taki/teki, bar/ber, ban/ben,
+tai/tei, nar/ner and the ordinals duγar/düger.
+
+No vowel-harmony check is made: after NNBSP a suffix renders the same whatever precedes it, and
+the written spelling is kept. After a Mongolian word, three rules decline stems after which the same
+letters are usually an independent word (after other tokens the spelling is taken as written):
+
+- Ordinals are not repaired after a Mongolian word, since dugar is also a word; after a number
+  (`3 ᠳᠤᠭᠠᠷ`) or any other token they are.
+- T-initial suffixes other than tai/tei need a stem ending in a consonant that selects them,
+  such as ᠷ, ᠭ, ᠰ or ᠳ; after a vowel, `ᠲᠦᠷ` is the word tür.
+- Bar/ber and ban/ben need a stem ending in a vowel or ᠶ, so `ᠴᠠᠭᠠᠨ ᠪᠠᠷ` ("white tiger")
+  is left alone.
+
+Stems may contain variation selectors, ZWJ/ZWNJ or MVS, and internal MVS characters
+in suffixes are preserved. In suffix chains the rules use the immediately preceding segment.
+
+See the [particle mapping audit](../../docs/suffix-separator-repair.md) for the exact Unicode
+spellings, the corpus evidence and the decisions for all 49 entries in the pinned font table.
+Repair supports 54 spellings in total; this is not a complete Mongolian suffix inventory.
+Particles whose normal separator is an ordinary space (`ᠴᠤ`, `ᠶᠤᠮ`, `ᠬᠦ`, `ᠨᠢ`, `ᠦᠭᠡᠢ`)
+are excluded. A font's particle table is not a repair allowlist.
+
+This is an explicit spelling heuristic, not grammatical validation: it cannot tell whether a
+suffix-like token was intended as a separate word or a quoted letter. In two 50 MB corpus tests with
+every NNBSP removed, at least 99.65% of repairs restored an original NNBSP, and most of the rest
+were suffixes the writer had spaced after a Latin word. Concatenated words,
+FVS-bearing suffix spellings, existing NNBSP/MVS, tabs, newlines and runs of multiple spaces are
+left alone. The suffix inventory is based on the separated suffix examples in
+[L2/19-130](https://unicode.org/L2/L2019/19130-mwg3-8-mong-spec-r.pdf) and
+[L2/18-293](https://www.unicode.org/L2/L2018/18293-nnbsp-solution.pdf).
+
+Each change returns `Warning::RepairedSuffixSeparator` with the **original input UTF-8 byte
+offset** and replaced character, followed by any conversion warnings. Repair runs even for
+same-encoding conversions. Any supported target can be used; the usual conversion rules then
+represent the repaired boundary in that target. Enabling repair for other source encodings
+returns `MecoError::UnsupportedInputRepair`, since their suffix spellings require different rules.
+The existing `translate` and `translate_with_warnings` APIs keep their behavior. This option is
+exposed in Rust, the CLI and the WebAssembly binding (`translate_with_options`, on by default in
+the web demo); the other platform bindings still use the default API.
+
 ## UTN #57 output
 
 Canonical UTN #57 Unicode output is part of the default build and uses the same API:

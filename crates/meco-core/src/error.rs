@@ -24,6 +24,8 @@ pub enum MecoError {
     UnsupportedEnumType(String),
     /// Conversion involving this code is not supported in the active build.
     Unsupported(CodeType),
+    /// Suffix separator repair currently accepts MenkLetter and Delehi source text only.
+    UnsupportedInputRepair(CodeType),
     /// An in-process UTN #57 conversion (`zvvnmod-utn57` + `mongol-norm`), either direction, failed.
     Utn57(String),
 }
@@ -34,9 +36,15 @@ impl fmt::Display for MecoError {
             MecoError::MissTranslateRule(ct) => write!(f, "missing translate rule for {ct:?}"),
             MecoError::NothingToPop => write!(f, "nothing to pop"),
             MecoError::NotFoundInMapper(k) => write!(f, "key not found in mapper: {k:?}"),
-            MecoError::NotSupportedCodeSeries(ct) => write!(f, "unsupported code series for {ct:?}"),
+            MecoError::NotSupportedCodeSeries(ct) => {
+                write!(f, "unsupported code series for {ct:?}")
+            }
             MecoError::UnsupportedEnumType(s) => write!(f, "unsupported encoding name: {s:?}"),
             MecoError::Unsupported(ct) => write!(f, "conversion not supported for {ct:?}"),
+            MecoError::UnsupportedInputRepair(ct) => write!(
+                f,
+                "suffix separator repair requires menk_letter or delehi input, got {ct:?}"
+            ),
             MecoError::Utn57(reason) => write!(f, "UTN #57 conversion failed: {reason}"),
         }
     }

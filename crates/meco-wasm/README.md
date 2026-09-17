@@ -8,7 +8,10 @@ import init, { translate, version } from "meco-wasm";  // bundler/web target
 // or: const { translate, version } = require("./pkg/meco_wasm.js");  // nodejs target
 translate("z52", "menk_shape", input); // -> String; throws on unknown encoding / unsupported path
 translate("delehi", "utn57_shape", input); // -> "SAIIA"-style written-unit spelling; reads too
-translate_with_warnings("zvvnmod", "utn57", input); // -> { text, warnings: string[] }; same throws
+translate_with_warnings("zvvnmod", "utn57", input); // -> { text, warnings: string[], repairs: [] }; same throws
+translate_with_options("menk_letter", "utn57", input, true); // also repairs lost suffix separators
+// -> { text, warnings, repairs: string[] }; `repairs` has one entry per space turned into NNBSP.
+// The repair flag is accepted for menk_letter / delehi input only; other sources throw.
 ```
 
 `from`/`to` are canonical encoding names: `zvvnmod`, `delehi`, `menk_shape`, `menk_letter`, `z52`.
