@@ -41,6 +41,15 @@ pub use router::{
     Warning,
 };
 
+/// Restore legacy SoftBank/iOS emoji that collide with MenkShape PUA.
+///
+/// This is a normalization helper for paste paths. It does not decode MenkShape; it only maps
+/// modern Unicode emoji back to the corresponding MenkShape private-use code points when that
+/// collision is known.
+pub fn restore_menk_shape_emoji(input: &str) -> String {
+    shape::softbank_emoji::restore_menk_shape(input).into_owned()
+}
+
 /// Crate version (currently just the Cargo package version). A table-provenance tag
 /// (the Java commit the generated tables come from) will be appended once tables exist.
 pub fn version() -> &'static str {

@@ -12,6 +12,7 @@ use crate::letter::from_translator::LetterFromTranslator;
 use crate::letter::rule::WORD_CONNECTOR;
 use crate::letter::to_translator::LetterToTranslator;
 use crate::shape::punctuation_gap;
+use crate::shape::softbank_emoji;
 use crate::shape::translator::ShapeTranslator;
 use crate::strings;
 use crate::unicode::zvvnmod::is_zvvnmod_code;
@@ -211,9 +212,16 @@ fn translate_from(ct: CodeType, s: &str) -> Result<String, MecoError> {
         CodeSeries::Shape => {
             // The punctuation gap is spacing, not content: it comes back out before the text
             // reaches the hub, so both sides agree on what the word is.
+            let restored;
+            let source = if ct == CodeType::MenkShape {
+                restored = softbank_emoji::restore_menk_shape(s);
+                restored.as_ref()
+            } else {
+                s
+            };
             let plain = match punctuation_gap::of(ct) {
-                Some(gap) => gap.strip(s),
-                None => s.to_string(),
+                Some(gap) => gap.strip(source),
+                None => source.to_string(),
             };
             ShapeTranslator::new(shape_from_rule(ct)?).translate(&plain)?
         }

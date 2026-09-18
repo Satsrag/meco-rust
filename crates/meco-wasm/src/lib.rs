@@ -75,3 +75,9 @@ pub fn translate_with_options(
 pub fn version() -> String {
     meco_core::version().to_string()
 }
+
+/// Restore legacy SoftBank/iOS emoji that collide with MenkShape PUA.
+#[wasm_bindgen]
+pub fn restore_menk_shape_emoji(input: &str) -> String {
+    meco_core::restore_menk_shape_emoji(input)
+}
