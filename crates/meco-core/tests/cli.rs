@@ -125,6 +125,7 @@ fn help_lists_the_command_and_supported_encoding_names() {
     let stdout = String::from_utf8(output.stdout).expect("help should be UTF-8");
     assert!(stdout.contains("meco translate --from <encoding> --to <encoding> [text]"));
     assert!(stdout.contains("reads UTF-8 text from stdin"));
+    assert!(stdout.contains("--no-restore-menk-shape-emoji"));
     for encoding in [
         "zvvnmod",
         "delehi",
@@ -206,6 +207,31 @@ fn converts_the_written_unit_spelling_in_both_directions() {
 
     let help = meco().arg("--help").output().expect("meco command should run");
     assert!(String::from_utf8_lossy(&help.stdout).contains("utn57_shape"));
+}
+
+#[test]
+fn menk_shape_emoji_restore_can_be_disabled_from_cli() {
+    let restored = meco()
+        .args(["translate", "--from", "menk_shape", "--to", "zvvnmod", "➡️"])
+        .output()
+        .unwrap();
+    assert!(restored.status.success());
+    assert_eq!(restored.stdout, "\u{1800}".as_bytes());
+
+    let raw = meco()
+        .args([
+            "translate",
+            "--from",
+            "menk_shape",
+            "--to",
+            "zvvnmod",
+            "--no-restore-menk-shape-emoji",
+            "➡️",
+        ])
+        .output()
+        .unwrap();
+    assert!(raw.status.success());
+    assert_eq!(raw.stdout, "➡️".as_bytes());
 }
 
 #[test]

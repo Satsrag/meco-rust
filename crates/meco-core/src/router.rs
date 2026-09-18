@@ -12,10 +12,12 @@ use crate::letter::from_translator::LetterFromTranslator;
 use crate::letter::rule::WORD_CONNECTOR;
 use crate::letter::to_translator::LetterToTranslator;
 use crate::shape::punctuation_gap;
+use crate::shape::softbank_emoji;
 use crate::shape::translator::ShapeTranslator;
 use crate::strings;
 use crate::unicode::zvvnmod::is_zvvnmod_code;
 use crate::utn57_shape;
+use std::borrow::Cow;
 use std::fmt;
 
 /// Something a conversion did beyond what its input said, including optional heuristic repairs.
@@ -61,13 +63,25 @@ pub struct Translation {
 
 /// Optional processing before conversion. Default settings preserve the input behavior of
 /// [`translate`].
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TranslationOptions {
     /// Replace single spaces/NBSP before a small allowlist of detached suffixes with NNBSP.
     /// Supported for MenkLetter and Delehi sources, including same-encoding conversions.
     /// This is a heuristic: it neither analyses grammar nor splits concatenated words. Each
     /// replacement is reported as [`Warning::RepairedSuffixSeparator`].
     pub repair_suffix_separators: bool,
+    /// Restore legacy SoftBank/iOS emoji back to MenkShape PUA before decoding MenkShape input.
+    /// This is enabled by default because chat apps can rewrite MenkShape PUA into modern emoji.
+    pub restore_menk_shape_emoji: bool,
+}
+
+impl Default for TranslationOptions {
+    fn default() -> Self {
+        Self {
+            repair_suffix_separators: false,
+            restore_menk_shape_emoji: true,
+        }
+    }
 }
 
 /// Convert with optional input repair. Repairs run before source decoding, even when `from == to`.
@@ -78,11 +92,12 @@ pub fn translate_with_options(
     input: &str,
     options: &TranslationOptions,
 ) -> Result<Translation, MecoError> {
-    if !options.repair_suffix_separators {
-        return translate_with_warnings(from, to, input);
-    }
-    let (input, mut warnings) = crate::repair::suffix_separators(from, input)?;
-    let mut result = translate_with_warnings(from, to, &input)?;
+    let (input, mut warnings) = if options.repair_suffix_separators {
+        crate::repair::suffix_separators(from, input)?
+    } else {
+        (Cow::Borrowed(input), Vec::new())
+    };
+    let mut result = translate_inner(from, to, &input, options)?;
     warnings.append(&mut result.warnings);
     result.warnings = warnings;
     Ok(result)
@@ -115,13 +130,27 @@ pub fn translate_with_warnings(
     to: CodeType,
     input: &str,
 ) -> Result<Translation, MecoError> {
-    if from == to || strings::is_blank(input) {
+    translate_inner(from, to, input, &TranslationOptions::default())
+}
+
+fn translate_inner(
+    from: CodeType,
+    to: CodeType,
+    input: &str,
+    options: &TranslationOptions,
+) -> Result<Translation, MecoError> {
+    if strings::is_blank(input) {
         return Ok(Translation::plain(input.to_string()));
+    }
+    if from == to {
+        return Ok(Translation::plain(
+            normalize_menk_shape_source(from, input, options).into_owned(),
+        ));
     }
     let hub = if from == CodeType::Zvvnmod {
         input.to_string()
     } else {
-        translate_from(from, input)?
+        translate_from(from, input, options)?
     };
     if to == CodeType::Zvvnmod {
         return Ok(Translation::plain(hub));
@@ -191,14 +220,30 @@ fn joins_to_the_right(c: char) -> bool {
     is_zvvnmod_code(c) || matches!(c, HUB_G_O_ISOL | '\u{E0E5}' | '\u{180A}' | '\u{200D}')
 }
 
-fn translate_from(ct: CodeType, s: &str) -> Result<String, MecoError> {
+fn normalize_menk_shape_source<'a>(
+    ct: CodeType,
+    s: &'a str,
+    options: &TranslationOptions,
+) -> Cow<'a, str> {
+    if ct == CodeType::MenkShape && options.restore_menk_shape_emoji {
+        softbank_emoji::restore_menk_shape(s)
+    } else {
+        Cow::Borrowed(s)
+    }
+}
+
+fn translate_from(
+    ct: CodeType,
+    s: &str,
+    options: &TranslationOptions,
+) -> Result<String, MecoError> {
     if ct == CodeType::Oyun {
         return Err(MecoError::Unsupported(ct));
     }
     if ct == CodeType::Utn57Shape {
         // The written-unit spelling of a UTN #57 text: read it as that text.
         let utn57 = utn57_shape::decode(s)?;
-        return translate_from(CodeType::Utn57, &utn57);
+        return translate_from(CodeType::Utn57, &utn57, options);
     }
     if ct == CodeType::Utn57 {
         // Already hub-spelled: the UTN #57 crate reads and writes E0E5 itself.
@@ -211,9 +256,10 @@ fn translate_from(ct: CodeType, s: &str) -> Result<String, MecoError> {
         CodeSeries::Shape => {
             // The punctuation gap is spacing, not content: it comes back out before the text
             // reaches the hub, so both sides agree on what the word is.
+            let source = normalize_menk_shape_source(ct, s, options);
             let plain = match punctuation_gap::of(ct) {
-                Some(gap) => gap.strip(s),
-                None => s.to_string(),
+                Some(gap) => gap.strip(&source),
+                None => source.into_owned(),
             };
             ShapeTranslator::new(shape_from_rule(ct)?).translate(&plain)?
         }

@@ -229,7 +229,7 @@
     </dialog>
 
 <script type="module">
-import init, { translate, translate_with_warnings, translate_with_options, version } from "./pkg/meco_wasm.js";
+import init, { restore_menk_shape_emoji, translate, translate_with_warnings, translate_with_options, version } from "./pkg/meco_wasm.js";
 
 const SIDE_TYPES = ["z52", "menk_shape", "menk_letter", "delehi", "utn57", "utn57_shape"]; // oyun still deferred
 // Every one of these reads and writes; the left/right split is a layout choice about where you
@@ -577,6 +577,13 @@ const warns = {};
 // warning, so they are counted next to the checkbox rather than raised in the alert bar.
 let repairs = [];
 let lastSrc = "L"; // the box last converted from; the checkbox re-runs that conversion
+function normalizeBox(which){
+    if(encOf(which) !== "menk_shape") return;
+    const box = $("box"+which), restored = restore_menk_shape_emoji(box.value);
+    if(restored === box.value) return;
+    box.value = restored;
+    box.selectionStart = box.selectionEnd = box.value.length;
+}
 function tr(from,to,s,slot,repair){
     errs[slot] = null;
     warns[slot] = [];
@@ -615,6 +622,7 @@ function reconvert(which){
 function recompute(src){
     errs.L = errs.M = errs.R = null;
     warns.L = warns.M = warns.R = [];
+    normalizeBox(src);
     const val = $("box"+src).value;
     const srcEnc = encOf(src);
     lastSrc = src;
@@ -878,8 +886,12 @@ function wire(){
         window.open(issueUrl(d, $("reportWhat").value.trim()), "_blank", "noopener");
         $("report").close();
     };
-    const deb = src => { paintPane(src); clearTimeout(window._t);
-                         window._t = setTimeout(()=>recompute(src),120); };
+    const deb = src => {
+        normalizeBox(src);
+        paintPane(src);
+        clearTimeout(window._t);
+        window._t = setTimeout(()=>recompute(src),120);
+    };
     $("boxL").addEventListener("input",()=>deb("L"));
     $("boxM").addEventListener("input",()=>deb("M"));
     $("boxR").addEventListener("input",()=>deb("R"));

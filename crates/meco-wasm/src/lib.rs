@@ -60,10 +60,23 @@ pub fn translate_with_options(
     input: &str,
     repair_suffix_separators: bool,
 ) -> Result<Translation, JsError> {
+    translate_with_all_options(from, to, input, repair_suffix_separators, true)
+}
+
+/// Like `translate_with_options`, with all currently supported input-normalization switches.
+#[wasm_bindgen]
+pub fn translate_with_all_options(
+    from: &str,
+    to: &str,
+    input: &str,
+    repair_suffix_separators: bool,
+    restore_menk_shape_emoji: bool,
+) -> Result<Translation, JsError> {
     let from = CodeType::from_str(from).map_err(|e| JsError::new(&e.to_string()))?;
     let to = CodeType::from_str(to).map_err(|e| JsError::new(&e.to_string()))?;
     let options = TranslationOptions {
         repair_suffix_separators,
+        restore_menk_shape_emoji,
     };
     let translation = meco_core::translate_with_options(from, to, input, &options)
         .map_err(|e| JsError::new(&e.to_string()))?;
@@ -74,4 +87,10 @@ pub fn translate_with_options(
 #[wasm_bindgen]
 pub fn version() -> String {
     meco_core::version().to_string()
+}
+
+/// Restore legacy SoftBank/iOS emoji that collide with MenkShape PUA.
+#[wasm_bindgen]
+pub fn restore_menk_shape_emoji(input: &str) -> String {
+    meco_core::restore_menk_shape_emoji(input)
 }
