@@ -46,7 +46,7 @@ let result = translate_with_options(
     CodeType::MenkLetter,
     CodeType::MenkLetter,
     "ᠤᠯᠤᠰ ᠤᠨ",
-    &TranslationOptions { repair_suffix_separators: true },
+    &TranslationOptions { repair_suffix_separators: true, ..TranslationOptions::default() },
 ).unwrap();
 assert_eq!(result.text, "ᠤᠯᠤᠰ\u{202F}ᠤᠨ");
 assert_eq!(result.warnings.len(), 1);
@@ -114,6 +114,31 @@ returns `MecoError::UnsupportedInputRepair`, since their suffix spellings requir
 The existing `translate` and `translate_with_warnings` APIs keep their behavior. This option is
 exposed in Rust, the CLI and the WebAssembly binding (`translate_with_options`, on by default in
 the web demo); the other platform bindings still use the default API.
+
+## MenkShape emoji restore
+
+When `menk_shape` is the source encoding, conversion restores legacy SoftBank/iOS emoji that
+collide with the MenkShape private-use range before decoding. This is on by default so text copied
+through chat apps such as WeChat can recover MenkShape glyphs that were rewritten as emoji.
+
+Disable it when the emoji should be treated as literal Unicode text:
+
+```rust
+use meco_core::{translate_with_options, CodeType, TranslationOptions};
+
+let result = translate_with_options(
+    CodeType::MenkShape,
+    CodeType::Zvvnmod,
+    "➡️",
+    &TranslationOptions {
+        restore_menk_shape_emoji: false,
+        ..TranslationOptions::default()
+    },
+).unwrap();
+assert_eq!(result.text, "➡️");
+```
+
+The CLI equivalent is `--no-restore-menk-shape-emoji`.
 
 ## UTN #57 output
 

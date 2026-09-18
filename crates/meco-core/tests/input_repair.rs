@@ -5,6 +5,7 @@ use meco_core::{
 
 const REPAIR: TranslationOptions = TranslationOptions {
     repair_suffix_separators: true,
+    restore_menk_shape_emoji: true,
 };
 const RAW: &str = "ᠤᠯᠤᠰ ᠤᠨ";
 const FIXED: &str = "ᠤᠯᠤᠰ\u{202F}ᠤᠨ";
